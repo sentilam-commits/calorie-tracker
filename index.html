@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#111418">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Calorie Tracker</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #1a1e26;
+    --card-2: #222834;
+    --text: #f2f4f8;
+    --muted: #8b93a3;
+    --accent: #4ea1ff;
+    --good: #37c978;
+    --bad: #ff5d5d;
+    --warn: #f0b03e;
+    --border: #2a303c;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  .wrap { max-width: 520px; margin: 0 auto; padding: 14px 16px 60px; }
+
+  /* Top bar: sync status */
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .sync-pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 999px; padding: 6px 12px; font-size: 12px; color: var(--muted);
+    cursor: pointer;
+  }
+  .sync-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+  .sync-dot.ok { background: var(--good); }
+  .sync-dot.syncing { background: var(--warn); animation: pulse 1s infinite; }
+  .sync-dot.offline { background: var(--bad); }
+  .sync-dot.local { background: var(--muted); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+
+  /* Day navigation */
+  .daynav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
+  .daynav button {
+    background: var(--card); border: 1px solid var(--border); color: var(--text);
+    width: 40px; height: 40px; border-radius: 10px; font-size: 20px; cursor: pointer; flex: none;
+  }
+  .daynav button:disabled { opacity: .3; cursor: default; }
+  .daynav .daylabel { text-align: center; flex: 1; font-weight: 600; font-size: 15px; }
+  .daynav .daylabel small { display: block; color: var(--muted); font-weight: 400; font-size: 12px; }
+  .today-btn { width: auto !important; padding: 0 12px; font-size: 13px !important; height: 40px; }
+
+  /* Total card */
+  .total-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 22px 18px; text-align: center; margin-bottom: 14px;
+  }
+  .total-num { font-size: 64px; font-weight: 800; letter-spacing: -2px; line-height: 1; }
+  .total-label { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin-top: 6px; }
+  .target-line { margin-top: 12px; font-size: 15px; font-weight: 600; }
+  .target-line.good { color: var(--good); }
+  .target-line.bad { color: var(--bad); }
+  .target-line.none { color: var(--muted); font-weight: 400; }
+  .progress { height: 6px; border-radius: 4px; background: var(--card-2); margin-top: 12px; overflow: hidden; }
+  .progress > div { height: 100%; background: var(--good); width: 0%; transition: width .2s; }
+  .progress > div.over { background: var(--bad); }
+
+  /* Input */
+  .entry-form {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px; margin-bottom: 18px;
+    display: grid; grid-template-columns: 96px 1fr auto; gap: 8px; align-items: stretch;
+  }
+  .entry-form input {
+    background: var(--card-2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 10px; padding: 14px 12px; font-size: 16px; outline: none;
+  }
+  .entry-form input:focus { border-color: var(--accent); }
+  .entry-form input.cal { font-weight: 700; text-align: center; }
+  .entry-form input.note { min-width: 0; }
+  .entry-form button {
+    background: var(--accent); border: none; color: #fff; font-weight: 700; font-size: 16px;
+    padding: 0 22px; border-radius: 10px; cursor: pointer; min-height: 48px;
+  }
+  @media (max-width: 430px) {
+    .entry-form { grid-template-columns: 96px 1fr; }
+    .entry-form button { grid-column: 1 / -1; padding: 13px; }
+  }
+  .entry-form button:active { opacity: .8; }
+  .entry-form button:disabled { opacity: .5; cursor: default; }
+
+  /* Entries list */
+  .entries { list-style: none; padding: 0; margin: 0; }
+  .entries li {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px;
+  }
+  .entries .cal-val { font-size: 20px; font-weight: 800; min-width: 62px; text-align: right; }
+  .entries .info { flex: 1; min-width: 0; }
+  .entries .info .note { font-size: 15px; word-break: break-word; }
+  .entries .info .note.empty { color: var(--muted); font-style: italic; }
+  .entries .info .time { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .entries .acts { display: flex; gap: 6px; flex: none; }
+  .entries .acts button {
+    background: var(--card-2); border: 1px solid var(--border); color: var(--muted);
+    width: 34px; height: 34px; border-radius: 8px; cursor: pointer; font-size: 15px;
+  }
+  .entries .acts button:hover { color: var(--text); }
+  .empty-state { text-align: center; color: var(--muted); padding: 26px 10px; font-size: 15px; }
+
+  /* Footer actions */
+  .footer { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; }
+  .footer button {
+    background: var(--card); border: 1px solid var(--border); color: var(--muted);
+    padding: 9px 14px; border-radius: 10px; font-size: 13px; cursor: pointer;
+  }
+  .footer button:hover { color: var(--text); }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 14px; }
+
+  /* Modals */
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+  .modal-bg.show { display: flex; }
+  .modal { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; width: 100%; max-width: 380px; }
+  .modal h3 { margin: 0 0 14px; font-size: 17px; }
+  .modal p { color: var(--muted); font-size: 13px; margin: 6px 0; }
+  .modal label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 4px; }
+  .modal input {
+    width: 100%; background: var(--card-2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 10px; padding: 12px; font-size: 16px; outline: none;
+  }
+  .modal input:focus { border-color: var(--accent); }
+  .modal .row { display: flex; gap: 8px; margin-top: 18px; }
+  .modal .row button { flex: 1; padding: 12px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; }
+  .modal .save { background: var(--accent); color: #fff; }
+  .modal .cancel { background: var(--card-2); color: var(--text); border: 1px solid var(--border) !important; }
+  .code-box {
+    display: flex; gap: 8px; align-items: center; margin-top: 6px;
+    background: var(--card-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px;
+  }
+  .code-box code { flex: 1; font-size: 13px; word-break: break-all; font-family: ui-monospace, Menlo, Consolas, monospace; color: var(--text); }
+  .code-box button { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Top bar: sync status -->
+  <div class="topbar">
+    <div class="sync-pill" id="syncPill" title="Sync status">
+      <span class="sync-dot local" id="syncDot"></span>
+      <span id="syncText">Local only</span>
+    </div>
+  </div>
+
+  <!-- Day navigation -->
+  <div class="daynav">
+    <button id="prevDay" title="Previous day">‹</button>
+    <div class="daylabel">
+      <span id="dayName">Today</span>
+      <small id="dayDate"></small>
+    </div>
+    <button id="nextDay" title="Next day">›</button>
+    <button id="todayBtn" class="today-btn" title="Jump to today">Today</button>
+  </div>
+
+  <!-- Daily total -->
+  <div class="total-card">
+    <div class="total-num" id="totalNum">0</div>
+    <div class="total-label">calories today</div>
+    <div class="target-line none" id="targetLine">No daily target set</div>
+    <div class="progress" id="progressWrap" style="display:none"><div id="progressBar"></div></div>
+  </div>
+
+  <!-- Fast input -->
+  <form class="entry-form" id="entryForm" autocomplete="off">
+    <input class="cal" id="calInput" type="number" inputmode="numeric" min="1" step="1" placeholder="kcal" aria-label="Calories" required>
+    <input class="note" id="noteInput" type="text" placeholder="What did you eat? (optional)" aria-label="Note">
+    <button type="submit" id="addBtn">Add</button>
+  </form>
+
+  <!-- Entries -->
+  <ul class="entries" id="entriesList"></ul>
+  <div class="empty-state" id="emptyState" style="display:none">No entries for this day yet.</div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <button id="targetBtn">🎯 Set target</button>
+    <button id="syncBtn">🔗 Sync devices</button>
+    <button id="exportBtn">⬇ Export</button>
+    <button id="importBtn">⬆ Import</button>
+    <input type="file" id="importFile" accept="application/json,.json" style="display:none">
+  </div>
+  <div class="hint">Type calories, optionally a note, then press Enter. Your data syncs across devices that use the same sync code.</div>
+</div>
+
+<!-- Edit modal -->
+<div class="modal-bg" id="editModal">
+  <div class="modal">
+    <h3>Edit entry</h3>
+    <label for="editCal">Calories</label>
+    <input id="editCal" type="number" inputmode="numeric" min="1" step="1">
+    <label for="editNote">Note</label>
+    <input id="editNote" type="text" placeholder="Optional">
+    <div class="row">
+      <button class="cancel" id="editCancel" type="button">Cancel</button>
+      <button class="save" id="editSave" type="button">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sync modal -->
+<div class="modal-bg" id="syncModal">
+  <div class="modal">
+    <h3>Sync across devices</h3>
+    <p>To use the same data on another device, open this app there and paste this code into it. Keep it private — anyone with this code can see your entries.</p>
+    <label>Your sync code</label>
+    <div class="code-box">
+      <code id="syncCodeText">…</code>
+      <button id="copyCodeBtn" type="button">Copy</button>
+    </div>
+    <hr class="divider">
+    <label for="linkCodeInput">Use a code from another device</label>
+    <input id="linkCodeInput" type="text" placeholder="Paste a sync code here" autocomplete="off" spellcheck="false">
+    <p>Linking replaces this device's local data with the data from that code.</p>
+    <div class="row">
+      <button class="cancel" id="syncClose" type="button">Close</button>
+      <button class="save" id="linkBtn" type="button">Link this device</button>
+    </div>
+  </div>
+</div>
+
+<!-- Supabase client library -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  // ---------- Config ----------
+  var SUPABASE_URL = "https://gxzhaxhelnftyksjiedk.supabase.co";
+  var SUPABASE_KEY = "sb_publishable_5m368n2ovzhA2J7lwIgLMg_ZSwX7qBw";
+  var DATA_KEY = "ct.data";
+  var CODE_KEY = "ct.syncCode";
+  var POLL_MS = 15000;
+
+  // ---------- State ----------
+  var data = loadData();       // { entries:[{id,calories,note,ts,updated_at,dirty,deleted}], target, target_updated_at, target_dirty }
+  var syncCode = resolveSyncCode();
+  var sb = null;               // supabase client
+  var viewDate = todayKey();
+  var editingId = null;
+  var submitting = false;
+  var syncing = false;
+  var pendingSync = false;
+  var lastSyncOk = false;
+
+  // ---------- Storage ----------
+  function loadData() {
+    try {
+      var raw = localStorage.getItem(DATA_KEY);
+      if (raw) return normalize(JSON.parse(raw));
+    } catch (e) {}
+    // Migrate from the older local-only version if present
+    try {
+      var old = localStorage.getItem("calorieTracker.v1");
+      if (old) {
+        var o = JSON.parse(old);
+        var now = Date.now();
+        var migrated = { entries: [], target: (typeof o.target === "number" ? o.target : null),
+                         target_updated_at: now, target_dirty: (typeof o.target === "number") };
+        (o.entries || []).forEach(function (e) {
+          migrated.entries.push({ id: e.id || uuid(), calories: e.calories, note: e.note || "",
+                                  ts: e.ts || now, updated_at: now, dirty: true, deleted: false });
+        });
+        return migrated;
+      }
+    } catch (e) {}
+    return { entries: [], target: null, target_updated_at: 0, target_dirty: false };
+  }
+  function normalize(d) {
+    if (!d || !Array.isArray(d.entries)) return { entries: [], target: null, target_updated_at: 0, target_dirty: false };
+    if (typeof d.target !== "number") d.target = null;
+    if (typeof d.target_updated_at !== "number") d.target_updated_at = 0;
+    d.target_dirty = !!d.target_dirty;
+    d.entries.forEach(function (e) {
+      if (!e.id) e.id = uuid();
+      if (typeof e.updated_at !== "number") e.updated_at = e.ts || Date.now();
+      e.dirty = !!e.dirty; e.deleted = !!e.deleted;
+    });
+    return d;
+  }
+  function save() { localStorage.setItem(DATA_KEY, JSON.stringify(data)); }
+
+  function uuid() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+      var r = Math.random() * 16 | 0, v = c === "x" ? r : (r & 0x3 | 0x8); return v.toString(16);
+    });
+  }
+
+  // ---------- Sync code ----------
+  function resolveSyncCode() {
+    // Allow linking via URL hash: #code=XXXX  (adopted then cleaned from the URL)
+    var m = location.hash.match(/code=([A-Za-z0-9\-]+)/);
+    if (m) {
+      localStorage.setItem(CODE_KEY, m[1]);
+      history.replaceState(null, "", location.pathname + location.search);
+      return m[1];
+    }
+    var existing = localStorage.getItem(CODE_KEY);
+    if (existing) return existing;
+    var fresh = uuid();
+    localStorage.setItem(CODE_KEY, fresh);
+    return fresh;
+  }
+
+  // ---------- Supabase ----------
+  function initClient() {
+    if (!window.supabase || !SUPABASE_URL || SUPABASE_URL.indexOf("YOUR_") === 0) { sb = null; return; }
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { "x-sync-code": syncCode } }
+    });
+  }
+
+  function setStatus(kind) {
+    var dot = document.getElementById("syncDot");
+    var txt = document.getElementById("syncText");
+    dot.className = "sync-dot " + kind;
+    txt.textContent = kind === "ok" ? "Synced" : kind === "syncing" ? "Syncing…" :
+                      kind === "offline" ? "Offline — saved locally" : "Local only";
+  }
+
+  // Push local changes, then pull remote state. Server-authoritative with last-write-wins.
+  function syncNow() {
+    if (!sb) return Promise.resolve();
+    if (syncing) { pendingSync = true; return Promise.resolve(); } // coalesce: run again when current finishes
+    syncing = true;
+    setStatus("syncing");
+    return push()
+      .then(pull)
+      .then(function () { lastSyncOk = true; save(); render(); setStatus("ok"); })
+      .catch(function () { setStatus("offline"); })
+      .then(function () {
+        syncing = false;
+        if (pendingSync) { pendingSync = false; syncNow(); } // flush changes queued mid-sync
+      });
+  }
+
+  function push() {
+    var jobs = [];
+    data.entries.forEach(function (e) {
+      if (!e.dirty) return;
+      if (e.deleted) {
+        jobs.push(sb.from("entries").delete().eq("id", e.id).then(function (r) {
+          if (!r.error) e._remove = true;
+        }));
+      } else {
+        jobs.push(sb.from("entries").upsert({
+          id: e.id, sync_code: syncCode, calories: e.calories, note: e.note,
+          eaten_at: new Date(e.ts).toISOString(), updated_at: new Date(e.updated_at).toISOString()
+        }).then(function (r) { if (!r.error) e.dirty = false; }));
+      }
+    });
+    if (data.target_dirty) {
+      jobs.push(sb.from("settings").upsert({
+        sync_code: syncCode, target: data.target, updated_at: new Date(data.target_updated_at).toISOString()
+      }).then(function (r) { if (!r.error) data.target_dirty = false; }));
+    }
+    return Promise.all(jobs).then(function () {
+      // Drop entries whose deletion was confirmed on the server
+      data.entries = data.entries.filter(function (e) { return !e._remove; });
+    });
+  }
+
+  function pull() {
+    return sb.from("entries").select("*").then(function (res) {
+      if (res.error) throw res.error;
+      var rows = res.data || [];
+      var serverIds = {};
+      rows.forEach(function (r) {
+        serverIds[r.id] = true;
+        var local = findEntry(r.id);
+        var sUpd = new Date(r.updated_at).getTime();
+        if (!local) {
+          data.entries.push({ id: r.id, calories: r.calories, note: r.note || "",
+            ts: new Date(r.eaten_at).getTime(), updated_at: sUpd, dirty: false, deleted: false });
+        } else if (!local.dirty && sUpd > local.updated_at) {
+          local.calories = r.calories; local.note = r.note || "";
+          local.ts = new Date(r.eaten_at).getTime(); local.updated_at = sUpd;
+        }
+      });
+      // Rows deleted on another device: remove local clean copies no longer on the server
+      data.entries = data.entries.filter(function (e) {
+        return e.dirty || e.deleted || serverIds[e.id];
+      });
+      return sb.from("settings").select("*").eq("sync_code", syncCode).maybeSingle();
+    }).then(function (res) {
+      if (res && res.data && !data.target_dirty) {
+        var sUpd = new Date(res.data.updated_at).getTime();
+        if (sUpd >= (data.target_updated_at || 0)) {
+          data.target = res.data.target; data.target_updated_at = sUpd;
+        }
+      }
+    });
+  }
+
+  function findEntry(id) {
+    return data.entries.find(function (e) { return e.id === id; });
+  }
+
+  // ---------- Date helpers (local time) ----------
+  function dateKeyFromDate(dt) {
+    return dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0");
+  }
+  function todayKey() { return dateKeyFromDate(new Date()); }
+  function keyToDate(key) { var p = key.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function shiftDay(key, delta) { var dt = keyToDate(key); dt.setDate(dt.getDate() + delta); return dateKeyFromDate(dt); }
+  function dayKeyOfEntry(e) { return dateKeyFromDate(new Date(e.ts)); }
+
+  // ---------- Derived ----------
+  function visibleEntries() {
+    return data.entries.filter(function (e) { return !e.deleted; });
+  }
+  function entriesForDay(key) {
+    return visibleEntries()
+      .filter(function (e) { return dayKeyOfEntry(e) === key; })
+      .sort(function (a, b) { return b.ts - a.ts; });
+  }
+  function totalForDay(key) {
+    return entriesForDay(key).reduce(function (s, e) { return s + e.calories; }, 0);
+  }
+
+  // ---------- Formatting ----------
+  function fmtNum(n) { return n.toLocaleString(); }
+  function fmtDayName(key) {
+    if (key === todayKey()) return "Today";
+    if (key === shiftDay(todayKey(), -1)) return "Yesterday";
+    return keyToDate(key).toLocaleDateString(undefined, { weekday: "long" });
+  }
+  function fmtDayDate(key) { return keyToDate(key).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" }); }
+  function fmtTime(ts) { return new Date(ts).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }); }
+
+  // ---------- Render ----------
+  var el = {
+    totalNum: document.getElementById("totalNum"),
+    targetLine: document.getElementById("targetLine"),
+    progressWrap: document.getElementById("progressWrap"),
+    progressBar: document.getElementById("progressBar"),
+    dayName: document.getElementById("dayName"),
+    dayDate: document.getElementById("dayDate"),
+    list: document.getElementById("entriesList"),
+    emptyState: document.getElementById("emptyState"),
+    nextDay: document.getElementById("nextDay")
+  };
+
+  function render() {
+    el.dayName.textContent = fmtDayName(viewDate);
+    el.dayDate.textContent = fmtDayDate(viewDate);
+    el.nextDay.disabled = (viewDate >= todayKey());
+
+    var total = totalForDay(viewDate);
+    el.totalNum.textContent = fmtNum(total);
+
+    if (data.target && data.target > 0) {
+      var remaining = data.target - total;
+      el.progressWrap.style.display = "block";
+      el.progressBar.style.width = Math.min(100, Math.round((total / data.target) * 100)) + "%";
+      if (remaining >= 0) {
+        el.targetLine.className = "target-line good";
+        el.targetLine.textContent = fmtNum(remaining) + " left of " + fmtNum(data.target);
+        el.progressBar.classList.remove("over");
+      } else {
+        el.targetLine.className = "target-line bad";
+        el.targetLine.textContent = fmtNum(-remaining) + " over " + fmtNum(data.target);
+        el.progressBar.classList.add("over");
+      }
+    } else {
+      el.progressWrap.style.display = "none";
+      el.targetLine.className = "target-line none";
+      el.targetLine.textContent = "No daily target set";
+    }
+
+    var items = entriesForDay(viewDate);
+    el.list.innerHTML = "";
+    el.emptyState.style.display = items.length ? "none" : "block";
+
+    items.forEach(function (e) {
+      var li = document.createElement("li");
+      var cal = document.createElement("div");
+      cal.className = "cal-val"; cal.textContent = fmtNum(e.calories);
+      var info = document.createElement("div"); info.className = "info";
+      var note = document.createElement("div");
+      if (e.note) { note.className = "note"; note.textContent = e.note; }
+      else { note.className = "note empty"; note.textContent = "No note"; }
+      var time = document.createElement("div"); time.className = "time"; time.textContent = fmtTime(e.ts);
+      info.appendChild(note); info.appendChild(time);
+      var acts = document.createElement("div"); acts.className = "acts";
+      var edit = document.createElement("button"); edit.textContent = "✎"; edit.title = "Edit";
+      edit.onclick = function () { openEdit(e.id); };
+      var del = document.createElement("button"); del.textContent = "🗑"; del.title = "Delete";
+      del.onclick = function () { deleteEntry(e.id); };
+      acts.appendChild(edit); acts.appendChild(del);
+      li.appendChild(cal); li.appendChild(info); li.appendChild(acts);
+      el.list.appendChild(li);
+    });
+  }
+
+  // ---------- Mutations ----------
+  function addEntry(calories, note) {
+    var now = Date.now();
+    data.entries.push({ id: uuid(), calories: calories, note: note, ts: now, updated_at: now, dirty: true, deleted: false });
+    save(); render(); syncNow();
+  }
+  function deleteEntry(id) {
+    if (!confirm("Delete this entry?")) return;
+    var e = findEntry(id);
+    if (!e) return;
+    e.deleted = true; e.dirty = true; e.updated_at = Date.now();
+    save(); render(); syncNow();
+  }
+  function openEdit(id) {
+    var e = findEntry(id);
+    if (!e) return;
+    editingId = id;
+    document.getElementById("editCal").value = e.calories;
+    document.getElementById("editNote").value = e.note || "";
+    document.getElementById("editModal").classList.add("show");
+    document.getElementById("editCal").focus();
+  }
+  function closeEdit() { editingId = null; document.getElementById("editModal").classList.remove("show"); }
+  function saveEdit() {
+    if (!editingId) return;
+    var val = parseInt(document.getElementById("editCal").value, 10);
+    if (!(val > 0)) { alert("Calories must be a positive number."); return; }
+    var e = findEntry(editingId);
+    if (e) { e.calories = val; e.note = document.getElementById("editNote").value.trim(); e.dirty = true; e.updated_at = Date.now(); }
+    save(); closeEdit(); render(); syncNow();
+  }
+
+  // ---------- Enter submits from either input ----------
+  ["calInput", "noteInput"].forEach(function (id) {
+    document.getElementById(id).addEventListener("keydown", function (ev) {
+      if (ev.key === "Enter") {
+        ev.preventDefault();
+        var form = document.getElementById("entryForm");
+        if (form.requestSubmit) form.requestSubmit();
+        else form.dispatchEvent(new Event("submit", { cancelable: true }));
+      }
+    });
+  });
+
+  // ---------- Form submit (double-submit guard) ----------
+  document.getElementById("entryForm").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    if (submitting) return;
+    var calInput = document.getElementById("calInput");
+    var noteInput = document.getElementById("noteInput");
+    var val = parseInt(calInput.value, 10);
+    if (!(val > 0)) { alert("Enter a positive number of calories."); calInput.focus(); return; }
+    submitting = true;
+    var btn = document.getElementById("addBtn"); btn.disabled = true;
+    addEntry(val, noteInput.value.trim());
+    calInput.value = ""; noteInput.value = ""; calInput.focus();
+    setTimeout(function () { submitting = false; btn.disabled = false; }, 250);
+  });
+
+  // ---------- Day navigation ----------
+  document.getElementById("prevDay").onclick = function () { viewDate = shiftDay(viewDate, -1); render(); };
+  document.getElementById("nextDay").onclick = function () { if (viewDate < todayKey()) { viewDate = shiftDay(viewDate, 1); render(); } };
+  document.getElementById("todayBtn").onclick = function () { viewDate = todayKey(); render(); };
+
+  // ---------- Target ----------
+  document.getElementById("targetBtn").onclick = function () {
+    var cur = data.target ? String(data.target) : "";
+    var input = prompt("Daily calorie target (leave empty to remove):", cur);
+    if (input === null) return;
+    input = input.trim();
+    if (input === "") { data.target = null; }
+    else { var v = parseInt(input, 10); if (!(v > 0)) { alert("Target must be a positive number."); return; } data.target = v; }
+    data.target_updated_at = Date.now(); data.target_dirty = true;
+    save(); render(); syncNow();
+  };
+
+  // ---------- Edit modal wiring ----------
+  document.getElementById("editSave").onclick = saveEdit;
+  document.getElementById("editCancel").onclick = closeEdit;
+  document.getElementById("editModal").addEventListener("click", function (ev) { if (ev.target === this) closeEdit(); });
+  document.getElementById("editCal").addEventListener("keydown", function (ev) { if (ev.key === "Enter") saveEdit(); });
+  document.getElementById("editNote").addEventListener("keydown", function (ev) { if (ev.key === "Enter") saveEdit(); });
+
+  // ---------- Sync modal ----------
+  function openSync() {
+    document.getElementById("syncCodeText").textContent = syncCode;
+    document.getElementById("linkCodeInput").value = "";
+    document.getElementById("syncModal").classList.add("show");
+  }
+  function closeSync() { document.getElementById("syncModal").classList.remove("show"); }
+  document.getElementById("syncBtn").onclick = openSync;
+  document.getElementById("syncPill").onclick = function () { openSync(); syncNow(); };
+  document.getElementById("syncClose").onclick = closeSync;
+  document.getElementById("syncModal").addEventListener("click", function (ev) { if (ev.target === this) closeSync(); });
+  document.getElementById("copyCodeBtn").onclick = function () {
+    var t = this;
+    (navigator.clipboard ? navigator.clipboard.writeText(syncCode) : Promise.reject()).then(function () {
+      t.textContent = "Copied!"; setTimeout(function () { t.textContent = "Copy"; }, 1500);
+    }).catch(function () {
+      var r = document.createRange(); r.selectNode(document.getElementById("syncCodeText"));
+      window.getSelection().removeAllRanges(); window.getSelection().addRange(r);
+    });
+  };
+  document.getElementById("linkBtn").onclick = function () {
+    var code = document.getElementById("linkCodeInput").value.trim();
+    if (!code) { alert("Paste a sync code first."); return; }
+    if (code === syncCode) { closeSync(); return; }
+    if (!confirm("Link this device to that code? This device's current local data will be replaced by the data stored under that code.")) return;
+    syncCode = code;
+    localStorage.setItem(CODE_KEY, code);
+    data = { entries: [], target: null, target_updated_at: 0, target_dirty: false };
+    save();
+    initClient();
+    closeSync();
+    render();
+    lastSyncOk = false;
+    syncNow();
+  };
+
+  // ---------- Export / Import ----------
+  document.getElementById("exportBtn").onclick = function () {
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = "calorie-tracker-backup-" + todayKey() + ".json";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  };
+  document.getElementById("importBtn").onclick = function () { document.getElementById("importFile").click(); };
+  document.getElementById("importFile").addEventListener("change", function (ev) {
+    var file = ev.target.files[0]; if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var d = JSON.parse(reader.result);
+        if (!d || !Array.isArray(d.entries)) throw new Error("Not a valid backup file.");
+        if (!confirm("Replace all current data with this backup, and push it to your synced devices?")) return;
+        data = normalize(d);
+        // Mark everything dirty so the imported data propagates to the server
+        data.entries.forEach(function (e) { e.dirty = true; e.updated_at = Date.now(); });
+        data.target_dirty = true; data.target_updated_at = Date.now();
+        save(); viewDate = todayKey(); render(); syncNow();
+        alert("Backup imported.");
+      } catch (e) { alert("Could not import: " + e.message); }
+    };
+    reader.readAsText(file);
+    ev.target.value = "";
+  });
+
+  // ---------- Lifecycle ----------
+  window.addEventListener("focus", function () { render(); syncNow(); });
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) { render(); syncNow(); } });
+  window.addEventListener("online", function () { syncNow(); });
+  setInterval(function () { if (!document.hidden) syncNow(); }, POLL_MS);
+
+  // ---------- Init ----------
+  initClient();
+  if (!sb) setStatus("local");
+  document.getElementById("calInput").focus();
+  render();
+  syncNow();
+})();
+</script>
+</body>
+</html>
