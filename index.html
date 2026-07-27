@@ -154,6 +154,61 @@
   .code-box code { flex: 1; font-size: 13px; word-break: break-all; font-family: ui-monospace, Menlo, Consolas, monospace; color: var(--text); }
   .code-box button { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
   .divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+
+  /* Tappable date */
+  .daylabel.tappable { cursor: pointer; border-radius: 10px; padding: 4px 8px; transition: background .12s; }
+  .daylabel.tappable:hover { background: var(--card); }
+  .daylabel .caret { font-size: 10px; color: var(--muted); margin-left: 4px; }
+
+  /* Quick-add meal chips */
+  .quick { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 10px; margin: -6px 0 12px; -webkit-overflow-scrolling: touch; }
+  .quick::-webkit-scrollbar { display: none; }
+  .chip {
+    flex: none; display: inline-flex; align-items: center; gap: 7px;
+    background: var(--card); border: 1px solid var(--border); color: var(--text);
+    border-radius: 999px; padding: 8px 14px; font-size: 14px; cursor: pointer; white-space: nowrap;
+  }
+  .chip:active { opacity: .7; }
+  .chip .kc { color: var(--accent); font-weight: 700; font-size: 13px; }
+  .chip.manage { color: var(--muted); }
+
+  /* Calendar */
+  .cal-modal { max-width: 420px; }
+  .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .cal-head button { background: var(--card-2); border: 1px solid var(--border); color: var(--text); width: 38px; height: 38px; border-radius: 9px; font-size: 18px; cursor: pointer; }
+  .cal-head #calTitle { font-weight: 700; font-size: 16px; }
+  .cal-summary { text-align: center; color: var(--muted); font-size: 12.5px; margin-bottom: 12px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-dow { text-align: center; color: var(--muted); font-size: 11px; padding-bottom: 4px; }
+  .cal-cell {
+    aspect-ratio: 1 / 1; border-radius: 9px; border: 1px solid transparent; background: var(--card-2);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    cursor: pointer; padding: 2px; overflow: hidden;
+  }
+  .cal-cell.empty { background: transparent; cursor: default; }
+  .cal-cell .d { font-size: 12px; color: var(--muted); line-height: 1; }
+  .cal-cell .kc { font-size: 12px; font-weight: 700; line-height: 1.1; }
+  .cal-cell.has .d { color: var(--text); }
+  .cal-cell.under .kc { color: var(--good); }
+  .cal-cell.over .kc { color: var(--bad); }
+  .cal-cell.plain .kc { color: var(--accent); }
+  .cal-cell.today { border-color: var(--accent); }
+  .cal-cell.selected { background: var(--accent); }
+  .cal-cell.selected .d, .cal-cell.selected .kc { color: #fff; }
+
+  /* Meals manager */
+  .meal-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .meal-row .mc { font-size: 17px; font-weight: 800; min-width: 54px; text-align: right; }
+  .meal-row .mn { flex: 1; min-width: 0; word-break: break-word; font-size: 15px; }
+  .meal-row button { background: var(--card-2); border: 1px solid var(--border); color: var(--muted); height: 34px; border-radius: 8px; cursor: pointer; font-size: 13px; padding: 0 10px; }
+  .meal-row button.log { background: var(--accent); color: #fff; border: none; font-weight: 700; }
+  .meal-add { display: grid; grid-template-columns: 90px 1fr auto; gap: 8px; margin-top: 8px; }
+  .meal-add input { background: var(--card-2); border: 1px solid var(--border); color: var(--text); border-radius: 10px; padding: 11px; font-size: 16px; outline: none; }
+  .meal-add input:focus { border-color: var(--accent); }
+  .meal-add button { background: var(--accent); color: #fff; border: none; border-radius: 10px; font-weight: 700; padding: 0 16px; cursor: pointer; }
+  .meal-suggest { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .meal-suggest .chip { font-size: 12.5px; padding: 6px 10px; }
+  .modal .scroll { max-height: 46vh; overflow-y: auto; margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -170,8 +225,8 @@
   <!-- Day navigation -->
   <div class="daynav">
     <button id="prevDay" title="Previous day">‹</button>
-    <div class="daylabel">
-      <span id="dayName">Today</span>
+    <div class="daylabel tappable" id="dayLabel" title="Open calendar">
+      <span id="dayName">Today</span><span class="caret">▾</span>
       <small id="dayDate"></small>
     </div>
     <button id="nextDay" title="Next day">›</button>
@@ -188,10 +243,13 @@
 
   <!-- Fast input -->
   <form class="entry-form" id="entryForm" autocomplete="off">
-    <input class="cal" id="calInput" type="number" inputmode="numeric" min="1" step="1" placeholder="kcal" aria-label="Calories" required>
+    <input class="cal" id="calInput" type="tel" inputmode="tel" placeholder="kcal" aria-label="Calories" required>
     <input class="note" id="noteInput" type="text" placeholder="What did you eat? (optional)" aria-label="Note">
     <button type="submit" id="addBtn">Add</button>
   </form>
+
+  <!-- One-tap saved meals -->
+  <div class="quick" id="quickMeals"></div>
 
   <!-- Entries -->
   <ul class="entries" id="entriesList"></ul>
@@ -200,12 +258,13 @@
   <!-- Footer -->
   <div class="footer">
     <button id="targetBtn">🎯 Set target</button>
+    <button id="mealsBtn">🍽 Meals</button>
     <button id="syncBtn">🔗 Sync devices</button>
     <button id="exportBtn">⬇ Export</button>
     <button id="importBtn">⬆ Import</button>
     <input type="file" id="importFile" accept="application/json,.json" style="display:none">
   </div>
-  <div class="hint">Type calories, optionally a note, then press Enter. Your data syncs across devices that use the same sync code.</div>
+  <div class="hint">Tip: add several items at once by typing a sum like <b>200+150+30</b>. Tap the date for the calendar. Data syncs across devices sharing your sync code.</div>
 </div>
 
 <!-- Edit modal -->
@@ -213,7 +272,7 @@
   <div class="modal">
     <h3>Edit entry</h3>
     <label for="editCal">Calories</label>
-    <input id="editCal" type="number" inputmode="numeric" min="1" step="1">
+    <input id="editCal" type="tel" inputmode="tel">
     <label for="editNote">Note</label>
     <input id="editNote" type="text" placeholder="Optional">
     <div class="row">
@@ -241,6 +300,40 @@
       <button class="cancel" id="syncClose" type="button">Close</button>
       <button class="save" id="linkBtn" type="button">Link this device</button>
     </div>
+  </div>
+</div>
+
+<!-- Calendar modal -->
+<div class="modal-bg" id="calModal">
+  <div class="modal cal-modal">
+    <div class="cal-head">
+      <button id="calPrev" type="button">‹</button>
+      <div id="calTitle">Month</div>
+      <button id="calNext" type="button">›</button>
+    </div>
+    <div class="cal-summary" id="calSummary"></div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="row"><button class="cancel" id="calClose" type="button">Close</button></div>
+  </div>
+</div>
+
+<!-- Meals modal -->
+<div class="modal-bg" id="mealsModal">
+  <div class="modal">
+    <h3>Saved meals</h3>
+    <p>Tap <b>Log</b> to add a meal to today with one tap. Save meals you eat often.</p>
+    <div class="scroll" id="mealsList"></div>
+    <label>Add a meal</label>
+    <div class="meal-add">
+      <input id="mealCal" type="tel" inputmode="tel" placeholder="kcal">
+      <input id="mealName" type="text" placeholder="Name (e.g. Chicken & rice)">
+      <button id="mealAddBtn" type="button">Save</button>
+    </div>
+    <div id="mealSuggestWrap" style="display:none">
+      <label>Save from your recent logs</label>
+      <div class="meal-suggest" id="mealSuggest"></div>
+    </div>
+    <div class="row"><button class="cancel" id="mealsClose" type="button">Close</button></div>
   </div>
 </div>
 
@@ -280,7 +373,7 @@
       if (old) {
         var o = JSON.parse(old);
         var now = Date.now();
-        var migrated = { entries: [], target: (typeof o.target === "number" ? o.target : null),
+        var migrated = { entries: [], meals: [], target: (typeof o.target === "number" ? o.target : null),
                          target_updated_at: now, target_dirty: (typeof o.target === "number") };
         (o.entries || []).forEach(function (e) {
           migrated.entries.push({ id: e.id || uuid(), calories: e.calories, note: e.note || "",
@@ -289,10 +382,11 @@
         return migrated;
       }
     } catch (e) {}
-    return { entries: [], target: null, target_updated_at: 0, target_dirty: false };
+    return { entries: [], meals: [], target: null, target_updated_at: 0, target_dirty: false };
   }
   function normalize(d) {
-    if (!d || !Array.isArray(d.entries)) return { entries: [], target: null, target_updated_at: 0, target_dirty: false };
+    if (!d || !Array.isArray(d.entries)) return { entries: [], meals: [], target: null, target_updated_at: 0, target_dirty: false };
+    if (!Array.isArray(d.meals)) d.meals = [];
     if (typeof d.target !== "number") d.target = null;
     if (typeof d.target_updated_at !== "number") d.target_updated_at = 0;
     d.target_dirty = !!d.target_dirty;
@@ -300,6 +394,11 @@
       if (!e.id) e.id = uuid();
       if (typeof e.updated_at !== "number") e.updated_at = e.ts || Date.now();
       e.dirty = !!e.dirty; e.deleted = !!e.deleted;
+    });
+    d.meals.forEach(function (m) {
+      if (!m.id) m.id = uuid();
+      if (typeof m.updated_at !== "number") m.updated_at = Date.now();
+      m.dirty = !!m.dirty; m.deleted = !!m.deleted;
     });
     return d;
   }
@@ -376,14 +475,28 @@
         }).then(function (r) { if (!r.error) e.dirty = false; }));
       }
     });
+    data.meals.forEach(function (m) {
+      if (!m.dirty) return;
+      if (m.deleted) {
+        jobs.push(sb.from("meals").delete().eq("id", m.id).then(function (r) {
+          if (!r.error) m._remove = true;
+        }));
+      } else {
+        jobs.push(sb.from("meals").upsert({
+          id: m.id, sync_code: syncCode, name: m.name, calories: m.calories,
+          updated_at: new Date(m.updated_at).toISOString()
+        }).then(function (r) { if (!r.error) m.dirty = false; }));
+      }
+    });
     if (data.target_dirty) {
       jobs.push(sb.from("settings").upsert({
         sync_code: syncCode, target: data.target, updated_at: new Date(data.target_updated_at).toISOString()
       }).then(function (r) { if (!r.error) data.target_dirty = false; }));
     }
     return Promise.all(jobs).then(function () {
-      // Drop entries whose deletion was confirmed on the server
+      // Drop rows whose deletion was confirmed on the server
       data.entries = data.entries.filter(function (e) { return !e._remove; });
+      data.meals = data.meals.filter(function (m) { return !m._remove; });
     });
   }
 
@@ -416,11 +529,47 @@
           data.target = res.data.target; data.target_updated_at = sUpd;
         }
       }
+      return sb.from("meals").select("*");
+    }).then(function (res) {
+      if (res.error) throw res.error;
+      var rows = res.data || [];
+      var serverIds = {};
+      rows.forEach(function (r) {
+        serverIds[r.id] = true;
+        var local = findMeal(r.id);
+        var sUpd = new Date(r.updated_at).getTime();
+        if (!local) {
+          data.meals.push({ id: r.id, name: r.name || "", calories: r.calories, updated_at: sUpd, dirty: false, deleted: false });
+        } else if (!local.dirty && sUpd > local.updated_at) {
+          local.name = r.name || ""; local.calories = r.calories; local.updated_at = sUpd;
+        }
+      });
+      data.meals = data.meals.filter(function (m) { return m.dirty || m.deleted || serverIds[m.id]; });
     });
   }
 
   function findEntry(id) {
     return data.entries.find(function (e) { return e.id === id; });
+  }
+  function findMeal(id) {
+    return data.meals.find(function (m) { return m.id === id; });
+  }
+
+  // Parse a calorie value that may be a sum, e.g. "200+150+30" => 380. Returns NaN if invalid.
+  function parseCalories(str) {
+    if (str == null) return NaN;
+    var s = String(str).trim();
+    if (!s) return NaN;
+    var parts = s.split("+"), total = 0, seen = false;
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i].trim();
+      if (p === "") continue;           // tolerate a trailing "+" or double "++"
+      var n = Number(p);
+      if (!isFinite(n)) return NaN;
+      total += n; seen = true;
+    }
+    if (!seen) return NaN;
+    return Math.round(total);
   }
 
   // ---------- Date helpers (local time) ----------
@@ -443,6 +592,37 @@
   }
   function totalForDay(key) {
     return entriesForDay(key).reduce(function (s, e) { return s + e.calories; }, 0);
+  }
+  function visibleMeals() {
+    return data.meals.filter(function (m) { return !m.deleted; })
+      .sort(function (a, b) { return a.name.localeCompare(b.name); });
+  }
+  // Map of dayKey -> total calories, for a given year/month (0-based month).
+  function totalsForMonth(year, month) {
+    var map = {};
+    visibleEntries().forEach(function (e) {
+      var d = new Date(e.ts);
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        var k = dateKeyFromDate(d);
+        map[k] = (map[k] || 0) + e.calories;
+      }
+    });
+    return map;
+  }
+  // Distinct past meals (note + calories) not already saved, most frequent first.
+  function recentMealSuggestions() {
+    var counts = {}, saved = {};
+    visibleMeals().forEach(function (m) { saved[(m.name || "").toLowerCase() + "|" + m.calories] = true; });
+    visibleEntries().forEach(function (e) {
+      var name = (e.note || "").trim();
+      if (!name) return;
+      var key = name.toLowerCase() + "|" + e.calories;
+      if (saved[key]) return;
+      if (!counts[key]) counts[key] = { name: name, calories: e.calories, n: 0 };
+      counts[key].n++;
+    });
+    return Object.keys(counts).map(function (k) { return counts[k]; })
+      .sort(function (a, b) { return b.n - a.n; }).slice(0, 8);
   }
 
   // ---------- Formatting ----------
@@ -518,13 +698,52 @@
       li.appendChild(cal); li.appendChild(info); li.appendChild(acts);
       el.list.appendChild(li);
     });
+
+    renderQuick();
+  }
+
+  // Quick-add chips: one tap logs a saved meal to today.
+  function renderQuick() {
+    var wrap = document.getElementById("quickMeals");
+    wrap.innerHTML = "";
+    var meals = visibleMeals();
+    meals.forEach(function (m) {
+      var chip = document.createElement("button");
+      chip.type = "button"; chip.className = "chip";
+      var nm = document.createElement("span"); nm.textContent = m.name || "Meal";
+      var kc = document.createElement("span"); kc.className = "kc"; kc.textContent = fmtNum(m.calories);
+      chip.appendChild(nm); chip.appendChild(kc);
+      chip.onclick = function () { logMeal(m.id); };
+      wrap.appendChild(chip);
+    });
+    var manage = document.createElement("button");
+    manage.type = "button"; manage.className = "chip manage";
+    manage.textContent = meals.length ? "＋ Meals" : "＋ Save a meal";
+    manage.onclick = openMeals;
+    wrap.appendChild(manage);
   }
 
   // ---------- Mutations ----------
   function addEntry(calories, note) {
     var now = Date.now();
     data.entries.push({ id: uuid(), calories: calories, note: note, ts: now, updated_at: now, dirty: true, deleted: false });
+    viewDate = todayKey(); // entries log to now — make sure the user sees them
     save(); render(); syncNow();
+  }
+  function addMeal(name, calories) {
+    var now = Date.now();
+    data.meals.push({ id: uuid(), name: name, calories: calories, updated_at: now, dirty: true, deleted: false });
+    save(); render(); syncNow();
+  }
+  function deleteMeal(id) {
+    var m = findMeal(id);
+    if (!m) return;
+    m.deleted = true; m.dirty = true; m.updated_at = Date.now();
+    save(); render(); syncNow();
+  }
+  function logMeal(id) {
+    var m = findMeal(id);
+    if (m) addEntry(m.calories, m.name);
   }
   function deleteEntry(id) {
     if (!confirm("Delete this entry?")) return;
@@ -545,7 +764,7 @@
   function closeEdit() { editingId = null; document.getElementById("editModal").classList.remove("show"); }
   function saveEdit() {
     if (!editingId) return;
-    var val = parseInt(document.getElementById("editCal").value, 10);
+    var val = parseCalories(document.getElementById("editCal").value);
     if (!(val > 0)) { alert("Calories must be a positive number."); return; }
     var e = findEntry(editingId);
     if (e) { e.calories = val; e.note = document.getElementById("editNote").value.trim(); e.dirty = true; e.updated_at = Date.now(); }
@@ -570,8 +789,8 @@
     if (submitting) return;
     var calInput = document.getElementById("calInput");
     var noteInput = document.getElementById("noteInput");
-    var val = parseInt(calInput.value, 10);
-    if (!(val > 0)) { alert("Enter a positive number of calories."); calInput.focus(); return; }
+    var val = parseCalories(calInput.value);
+    if (!(val > 0)) { alert("Enter a positive number of calories (you can add a sum like 200+150)."); calInput.focus(); return; }
     submitting = true;
     var btn = document.getElementById("addBtn"); btn.disabled = true;
     addEntry(val, noteInput.value.trim());
@@ -595,6 +814,116 @@
     data.target_updated_at = Date.now(); data.target_dirty = true;
     save(); render(); syncNow();
   };
+
+  // ---------- Calendar ----------
+  var calYear, calMonth;
+  function openCalendar() {
+    var d = keyToDate(viewDate);
+    calYear = d.getFullYear(); calMonth = d.getMonth();
+    renderCalendar();
+    document.getElementById("calModal").classList.add("show");
+  }
+  function closeCalendar() { document.getElementById("calModal").classList.remove("show"); }
+  function renderCalendar() {
+    document.getElementById("calTitle").textContent =
+      new Date(calYear, calMonth, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" });
+    var totals = totalsForMonth(calYear, calMonth);
+    var days = Object.keys(totals);
+    var monthTotal = days.reduce(function (s, k) { return s + totals[k]; }, 0);
+    document.getElementById("calSummary").textContent = days.length
+      ? ("Logged " + days.length + (days.length === 1 ? " day" : " days") + " · " + fmtNum(monthTotal) +
+         " kcal · avg " + fmtNum(Math.round(monthTotal / days.length)) + "/day")
+      : "No entries logged this month.";
+
+    var grid = document.getElementById("calGrid");
+    grid.innerHTML = "";
+    ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].forEach(function (d) {
+      var h = document.createElement("div"); h.className = "cal-dow"; h.textContent = d; grid.appendChild(h);
+    });
+    var startPad = (new Date(calYear, calMonth, 1).getDay() + 6) % 7; // Mon-first
+    var daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+    for (var i = 0; i < startPad; i++) {
+      var pad = document.createElement("div"); pad.className = "cal-cell empty"; grid.appendChild(pad);
+    }
+    var tKey = todayKey();
+    for (var day = 1; day <= daysInMonth; day++) {
+      var key = dateKeyFromDate(new Date(calYear, calMonth, day));
+      var tot = totals[key] || 0;
+      var cell = document.createElement("div");
+      cell.className = "cal-cell";
+      if (tot > 0) {
+        cell.classList.add("has");
+        if (data.target && data.target > 0) cell.classList.add(tot > data.target ? "over" : "under");
+        else cell.classList.add("plain");
+      }
+      if (key === tKey) cell.classList.add("today");
+      if (key === viewDate) cell.classList.add("selected");
+      var dn = document.createElement("div"); dn.className = "d"; dn.textContent = day; cell.appendChild(dn);
+      if (tot > 0) { var kc = document.createElement("div"); kc.className = "kc"; kc.textContent = fmtNum(tot); cell.appendChild(kc); }
+      (function (k) { cell.onclick = function () { viewDate = k; closeCalendar(); render(); }; })(key);
+      grid.appendChild(cell);
+    }
+  }
+  document.getElementById("dayLabel").onclick = openCalendar;
+  document.getElementById("calPrev").onclick = function () { if (--calMonth < 0) { calMonth = 11; calYear--; } renderCalendar(); };
+  document.getElementById("calNext").onclick = function () { if (++calMonth > 11) { calMonth = 0; calYear++; } renderCalendar(); };
+  document.getElementById("calClose").onclick = closeCalendar;
+  document.getElementById("calModal").addEventListener("click", function (ev) { if (ev.target === this) closeCalendar(); });
+
+  // ---------- Meals manager ----------
+  function openMeals() { renderMeals(); document.getElementById("mealsModal").classList.add("show"); }
+  function closeMeals() { document.getElementById("mealsModal").classList.remove("show"); }
+  function flash(btn, txt) { var o = btn.textContent; btn.textContent = txt; setTimeout(function () { btn.textContent = o; }, 900); }
+  function renderMeals() {
+    var list = document.getElementById("mealsList");
+    list.innerHTML = "";
+    var meals = visibleMeals();
+    if (!meals.length) {
+      var em = document.createElement("div"); em.className = "empty-state"; em.style.padding = "12px 0";
+      em.textContent = "No saved meals yet — save one below."; list.appendChild(em);
+    }
+    meals.forEach(function (m) {
+      var row = document.createElement("div"); row.className = "meal-row";
+      var mc = document.createElement("div"); mc.className = "mc"; mc.textContent = fmtNum(m.calories);
+      var mn = document.createElement("div"); mn.className = "mn"; mn.textContent = m.name || "Meal";
+      var logBtn = document.createElement("button"); logBtn.className = "log"; logBtn.textContent = "Log";
+      logBtn.onclick = function () { logMeal(m.id); flash(logBtn, "Added ✓"); };
+      var del = document.createElement("button"); del.textContent = "✕"; del.title = "Delete";
+      del.onclick = function () { if (confirm('Delete saved meal "' + (m.name || "") + '"?')) { deleteMeal(m.id); renderMeals(); } };
+      row.appendChild(mc); row.appendChild(mn); row.appendChild(logBtn); row.appendChild(del);
+      list.appendChild(row);
+    });
+    var sugg = recentMealSuggestions();
+    var wrap = document.getElementById("mealSuggestWrap");
+    var sc = document.getElementById("mealSuggest");
+    sc.innerHTML = "";
+    if (sugg.length) {
+      wrap.style.display = "block";
+      sugg.forEach(function (s) {
+        var chip = document.createElement("button");
+        chip.type = "button"; chip.className = "chip";
+        var nm = document.createElement("span"); nm.textContent = "＋ " + s.name;
+        var kc = document.createElement("span"); kc.className = "kc"; kc.textContent = fmtNum(s.calories);
+        chip.appendChild(nm); chip.appendChild(kc);
+        chip.onclick = function () { addMeal(s.name, s.calories); renderMeals(); };
+        sc.appendChild(chip);
+      });
+    } else { wrap.style.display = "none"; }
+  }
+  document.getElementById("mealsBtn").onclick = openMeals;
+  document.getElementById("mealsClose").onclick = closeMeals;
+  document.getElementById("mealsModal").addEventListener("click", function (ev) { if (ev.target === this) closeMeals(); });
+  document.getElementById("mealAddBtn").onclick = function () {
+    var cal = parseCalories(document.getElementById("mealCal").value);
+    var name = document.getElementById("mealName").value.trim();
+    if (!(cal > 0)) { alert("Enter the meal's calories (a number, or a sum like 200+150)."); return; }
+    if (!name) { alert("Give the meal a name."); return; }
+    addMeal(name, cal);
+    document.getElementById("mealCal").value = ""; document.getElementById("mealName").value = "";
+    renderMeals();
+  };
+  document.getElementById("mealCal").addEventListener("keydown", function (ev) { if (ev.key === "Enter") document.getElementById("mealName").focus(); });
+  document.getElementById("mealName").addEventListener("keydown", function (ev) { if (ev.key === "Enter") document.getElementById("mealAddBtn").click(); });
 
   // ---------- Edit modal wiring ----------
   document.getElementById("editSave").onclick = saveEdit;
