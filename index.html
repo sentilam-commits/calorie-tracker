@@ -209,6 +209,24 @@
   .meal-suggest { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .meal-suggest .chip { font-size: 12.5px; padding: 6px 10px; }
   .modal .scroll { max-height: 46vh; overflow-y: auto; margin-top: 4px; }
+
+  /* Per-day sleep + notes */
+  .daymeta { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-top: 18px; }
+  .daymeta-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  .daymeta-row label { font-size: 14px; color: var(--text); font-weight: 600; }
+  .daymeta input[type="time"] {
+    background: var(--card-2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 10px; padding: 10px 12px; font-size: 16px; outline: none;
+  }
+  .daymeta input[type="time"]:focus { border-color: var(--accent); }
+  .daymeta input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(0.8); opacity: .7; cursor: pointer; }
+  .daymeta textarea {
+    width: 100%; background: var(--card-2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 10px; padding: 11px 12px; font-size: 15px; outline: none; resize: vertical;
+    font-family: inherit; line-height: 1.4;
+  }
+  .daymeta textarea::placeholder { color: var(--muted); }
+  .daymeta textarea:focus { border-color: var(--accent); }
 </style>
 </head>
 <body>
@@ -254,6 +272,15 @@
   <!-- Entries -->
   <ul class="entries" id="entriesList"></ul>
   <div class="empty-state" id="emptyState" style="display:none">No entries for this day yet.</div>
+
+  <!-- Per-day sleep + notes -->
+  <div class="daymeta">
+    <div class="daymeta-row">
+      <label for="sleptInput">🛏 Slept at</label>
+      <input id="sleptInput" type="time" aria-label="Time you slept">
+    </div>
+    <textarea id="dayNote" rows="2" placeholder="Notes for the day (optional)…" aria-label="Day notes"></textarea>
+  </div>
 
   <!-- Footer -->
   <div class="footer">
@@ -373,7 +400,7 @@
       if (old) {
         var o = JSON.parse(old);
         var now = Date.now();
-        var migrated = { entries: [], meals: [], target: (typeof o.target === "number" ? o.target : null),
+        var migrated = { entries: [], meals: [], days: {}, target: (typeof o.target === "number" ? o.target : null),
                          target_updated_at: now, target_dirty: (typeof o.target === "number") };
         (o.entries || []).forEach(function (e) {
           migrated.entries.push({ id: e.id || uuid(), calories: e.calories, note: e.note || "",
@@ -382,11 +409,19 @@
         return migrated;
       }
     } catch (e) {}
-    return { entries: [], meals: [], target: null, target_updated_at: 0, target_dirty: false };
+    return { entries: [], meals: [], days: {}, target: null, target_updated_at: 0, target_dirty: false };
   }
   function normalize(d) {
-    if (!d || !Array.isArray(d.entries)) return { entries: [], meals: [], target: null, target_updated_at: 0, target_dirty: false };
+    if (!d || !Array.isArray(d.entries)) return { entries: [], meals: [], days: {}, target: null, target_updated_at: 0, target_dirty: false };
     if (!Array.isArray(d.meals)) d.meals = [];
+    if (!d.days || typeof d.days !== "object" || Array.isArray(d.days)) d.days = {};
+    Object.keys(d.days).forEach(function (k) {
+      var x = d.days[k];
+      if (typeof x.updated_at !== "number") x.updated_at = Date.now();
+      if (typeof x.note !== "string") x.note = "";
+      if (typeof x.slept_at !== "string") x.slept_at = x.slept_at || null;
+      x.dirty = !!x.dirty;
+    });
     if (typeof d.target !== "number") d.target = null;
     if (typeof d.target_updated_at !== "number") d.target_updated_at = 0;
     d.target_dirty = !!d.target_dirty;
@@ -403,6 +438,9 @@
     return d;
   }
   function save() { localStorage.setItem(DATA_KEY, JSON.stringify(data)); }
+
+  // Strictly-increasing timestamp so two edits in the same millisecond get distinct versions.
+  function stamp(prev) { return Math.max(Date.now(), (prev || 0) + 1); }
 
   function uuid() {
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
@@ -469,10 +507,11 @@
           if (!r.error) e._remove = true;
         }));
       } else {
+        var eAt = e.updated_at; // clear dirty only if unchanged since this push started
         jobs.push(sb.from("entries").upsert({
           id: e.id, sync_code: syncCode, calories: e.calories, note: e.note,
           eaten_at: new Date(e.ts).toISOString(), updated_at: new Date(e.updated_at).toISOString()
-        }).then(function (r) { if (!r.error) e.dirty = false; }));
+        }).then((function (e, eAt) { return function (r) { if (!r.error && e.updated_at === eAt) e.dirty = false; }; })(e, eAt)));
       }
     });
     data.meals.forEach(function (m) {
@@ -482,11 +521,21 @@
           if (!r.error) m._remove = true;
         }));
       } else {
+        var mAt = m.updated_at;
         jobs.push(sb.from("meals").upsert({
           id: m.id, sync_code: syncCode, name: m.name, calories: m.calories,
           updated_at: new Date(m.updated_at).toISOString()
-        }).then(function (r) { if (!r.error) m.dirty = false; }));
+        }).then((function (m, mAt) { return function (r) { if (!r.error && m.updated_at === mAt) m.dirty = false; }; })(m, mAt)));
       }
+    });
+    Object.keys(data.days).forEach(function (k) {
+      var day = data.days[k];
+      if (!day.dirty) return;
+      var dAt = day.updated_at;
+      jobs.push(sb.from("days").upsert({
+        sync_code: syncCode, day: k, slept_at: day.slept_at || null, note: day.note || "",
+        updated_at: new Date(day.updated_at).toISOString()
+      }, { onConflict: "sync_code,day" }).then((function (day, dAt) { return function (r) { if (!r.error && day.updated_at === dAt) day.dirty = false; }; })(day, dAt)));
     });
     if (data.target_dirty) {
       jobs.push(sb.from("settings").upsert({
@@ -545,6 +594,19 @@
         }
       });
       data.meals = data.meals.filter(function (m) { return m.dirty || m.deleted || serverIds[m.id]; });
+      return sb.from("days").select("*");
+    }).then(function (res) {
+      if (res.error) throw res.error;
+      (res.data || []).forEach(function (r) {
+        var key = r.day; // 'YYYY-MM-DD'
+        var local = data.days[key];
+        var sUpd = new Date(r.updated_at).getTime();
+        if (!local) {
+          data.days[key] = { slept_at: r.slept_at || null, note: r.note || "", updated_at: sUpd, dirty: false };
+        } else if (!local.dirty && sUpd > local.updated_at) {
+          local.slept_at = r.slept_at || null; local.note = r.note || ""; local.updated_at = sUpd;
+        }
+      });
     });
   }
 
@@ -700,6 +762,16 @@
     });
 
     renderQuick();
+    renderDayMeta();
+  }
+
+  // Populate the sleep/note inputs for the viewed day (without clobbering an input being edited).
+  function renderDayMeta() {
+    var day = data.days[viewDate];
+    var slept = document.getElementById("sleptInput");
+    var note = document.getElementById("dayNote");
+    if (document.activeElement !== slept) slept.value = (day && day.slept_at) ? day.slept_at : "";
+    if (document.activeElement !== note) note.value = (day && day.note) ? day.note : "";
   }
 
   // Quick-add chips: one tap logs a saved meal to today.
@@ -738,18 +810,28 @@
   function deleteMeal(id) {
     var m = findMeal(id);
     if (!m) return;
-    m.deleted = true; m.dirty = true; m.updated_at = Date.now();
+    m.deleted = true; m.dirty = true; m.updated_at = stamp(m.updated_at);
     save(); render(); syncNow();
   }
   function logMeal(id) {
     var m = findMeal(id);
     if (m) addEntry(m.calories, m.name);
   }
+  // Per-day sleep time / note for the currently viewed day.
+  function setDayField(field, value, localOnly) {
+    var day = data.days[viewDate];
+    if (!day) day = data.days[viewDate] = { slept_at: null, note: "", updated_at: 0, dirty: false };
+    day[field] = value;
+    day.updated_at = stamp(day.updated_at);
+    day.dirty = true;
+    save();
+    if (!localOnly) syncNow();
+  }
   function deleteEntry(id) {
     if (!confirm("Delete this entry?")) return;
     var e = findEntry(id);
     if (!e) return;
-    e.deleted = true; e.dirty = true; e.updated_at = Date.now();
+    e.deleted = true; e.dirty = true; e.updated_at = stamp(e.updated_at);
     save(); render(); syncNow();
   }
   function openEdit(id) {
@@ -767,7 +849,7 @@
     var val = parseCalories(document.getElementById("editCal").value);
     if (!(val > 0)) { alert("Calories must be a positive number."); return; }
     var e = findEntry(editingId);
-    if (e) { e.calories = val; e.note = document.getElementById("editNote").value.trim(); e.dirty = true; e.updated_at = Date.now(); }
+    if (e) { e.calories = val; e.note = document.getElementById("editNote").value.trim(); e.dirty = true; e.updated_at = stamp(e.updated_at); }
     save(); closeEdit(); render(); syncNow();
   }
 
@@ -924,6 +1006,17 @@
   };
   document.getElementById("mealCal").addEventListener("keydown", function (ev) { if (ev.key === "Enter") document.getElementById("mealName").focus(); });
   document.getElementById("mealName").addEventListener("keydown", function (ev) { if (ev.key === "Enter") document.getElementById("mealAddBtn").click(); });
+
+  // ---------- Per-day sleep + notes wiring ----------
+  document.getElementById("sleptInput").addEventListener("change", function () {
+    setDayField("slept_at", this.value || null);
+  });
+  document.getElementById("dayNote").addEventListener("input", function () {
+    setDayField("note", this.value, true); // save locally on each keystroke, don't sync yet
+  });
+  document.getElementById("dayNote").addEventListener("change", function () {
+    setDayField("note", this.value); // sync when the field loses focus
+  });
 
   // ---------- Edit modal wiring ----------
   document.getElementById("editSave").onclick = saveEdit;
