@@ -1052,7 +1052,7 @@
     if (!confirm("Link this device to that code? This device's current local data will be replaced by the data stored under that code.")) return;
     syncCode = code;
     localStorage.setItem(CODE_KEY, code);
-    data = { entries: [], target: null, target_updated_at: 0, target_dirty: false };
+    data = { entries: [], meals: [], days: {}, target: null, target_updated_at: 0, target_dirty: false };
     save();
     initClient();
     closeSync();
