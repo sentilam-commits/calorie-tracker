@@ -177,7 +177,7 @@
   .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
   .cal-head button { background: var(--card-2); border: 1px solid var(--border); color: var(--text); width: 38px; height: 38px; border-radius: 9px; font-size: 18px; cursor: pointer; }
   .cal-head #calTitle { font-weight: 700; font-size: 16px; }
-  .cal-summary { text-align: center; color: var(--muted); font-size: 12.5px; margin-bottom: 12px; }
+  .cal-summary { text-align: center; color: var(--muted); font-size: 12.5px; line-height: 1.4; min-height: 2.8em; margin-bottom: 12px; }
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
   .cal-dow { text-align: center; color: var(--muted); font-size: 11px; padding-bottom: 4px; }
   .cal-cell {
@@ -944,6 +944,11 @@
       if (tot > 0) { var kc = document.createElement("div"); kc.className = "kc"; kc.textContent = fmtNum(tot); cell.appendChild(kc); }
       (function (k) { cell.onclick = function () { viewDate = k; closeCalendar(); render(); }; })(key);
       grid.appendChild(cell);
+    }
+    // Always fill out to 6 full rows so the grid height (and the arrows above it) stay put across months.
+    var trailing = 42 - (startPad + daysInMonth);
+    for (var j = 0; j < trailing; j++) {
+      var tpad = document.createElement("div"); tpad.className = "cal-cell empty"; grid.appendChild(tpad);
     }
   }
   document.getElementById("dayLabel").onclick = openCalendar;
