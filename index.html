@@ -357,9 +357,9 @@
   <p class="tol-hint">Evening rule: the last meal of the day should be the smallest one — digestion is slowest right before bed.</p>
   <p class="evening-note" id="eveningNote" style="display:none"></p>
 
-  <!-- Shown only when a meal on this day is marked "Too much" -->
-  <details class="recovery" id="recoveryPanel" style="display:none">
-    <summary>A meal was too much — what to do next</summary>
+  <!-- Always available; opens itself on a day with a "Too much" meal -->
+  <details class="recovery" id="recoveryPanel">
+    <summary id="recoverySummary">If a meal is too much — what to do</summary>
     <ul>
       <li><b>Keep the next meal.</b> Skipping or shrinking it to “make up for it” is what usually turns one hard meal into a setback.</li>
       <li><b>Delay, don't drop.</b> Still too full at the usual time? Push it 30–60 minutes and eat then. A late meal beats a missing one.</li>
@@ -552,6 +552,7 @@
   var viewDate = todayKey();
   var editingId = null;
   var editTolerance = null;    // pending tolerance inside the edit modal
+  var recoveryOpenedFor = null; // day whose "Too much" guidance was auto-opened
   var submitting = false;      // guards the add-entry form against double submits
   var daySubmitting = false;   // guards the "Save this day" button against double presses
   var syncing = false;
@@ -966,6 +967,7 @@
     statusLine: document.getElementById("statusLine"),
     statusText: document.getElementById("statusText"),
     recovery: document.getElementById("recoveryPanel"),
+    recoverySummary: document.getElementById("recoverySummary"),
     eveningNote: document.getElementById("eveningNote"),
     stepStatus: document.getElementById("stepStatus"),
     stepBtn: document.getElementById("stepBtn")
@@ -1060,7 +1062,15 @@
       el.statusLine.className = "status-line " + st.code;
       el.statusText.textContent = st.label;
     }
-    el.recovery.style.display = (st.code === "exceeded") ? "block" : "none";
+    // The panel is always there to read; it opens by itself the first time a day
+    // turns "exceeded", but never re-opens a day the user has collapsed again.
+    if (st.code === "exceeded") {
+      el.recoverySummary.textContent = "A meal was too much — what to do next";
+      if (recoveryOpenedFor !== viewDate) { el.recovery.open = true; recoveryOpenedFor = viewDate; }
+    } else {
+      el.recoverySummary.textContent = "If a meal is too much — what to do";
+      if (recoveryOpenedFor === viewDate) recoveryOpenedFor = null;
+    }
 
     var ev = eveningCheck(viewDate);
     if (ev) {
