@@ -64,6 +64,19 @@
   .daynav .daylabel small { display: block; color: var(--muted); font-weight: 400; font-size: 12px; }
   .today-btn { width: auto !important; padding: 0 12px; font-size: 13px !important; height: 40px; }
 
+  /* Date selector + "you are on a past day" flag */
+  .dayjump { display: flex; align-items: center; gap: 8px; margin: -6px 0 14px; }
+  .dayjump input[type="date"] {
+    flex: 1; min-width: 0; background: var(--card); border: 1px solid var(--border); color: var(--text);
+    border-radius: 10px; padding: 9px 12px; font-size: 15px; outline: none; font-family: inherit;
+  }
+  .dayjump input[type="date"]:focus { border-color: var(--accent); }
+  .dayjump input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.8); opacity: .7; cursor: pointer; }
+  .past-flag {
+    flex: none; background: rgba(240,176,62,.14); border: 1px solid rgba(240,176,62,.4); color: var(--warn);
+    border-radius: 999px; padding: 7px 12px; font-size: 12px; font-weight: 600; white-space: nowrap;
+  }
+
   /* Total card */
   .total-card {
     background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
@@ -78,6 +91,16 @@
   .progress { height: 6px; border-radius: 4px; background: var(--card-2); margin-top: 12px; overflow: hidden; }
   .progress > div { height: 100%; background: var(--good); width: 0%; transition: width .2s; }
   .progress > div.over { background: var(--bad); }
+
+  /* Daily tolerance status — deliberately secondary to the calorie total */
+  .status-line {
+    margin-top: 12px; font-size: 12.5px; color: var(--muted);
+    display: inline-flex; align-items: center; gap: 7px;
+  }
+  .status-line .sdot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none; }
+  .status-line.ok .sdot { background: var(--good); }
+  .status-line.exceeded .sdot { background: var(--bad); }
+  .status-line.partial .sdot { background: var(--warn); }
 
   /* Input */
   .entry-form {
@@ -122,6 +145,60 @@
   .entries .acts button:hover { color: var(--text); }
   .empty-state { text-align: center; color: var(--muted); padding: 26px 10px; font-size: 15px; }
 
+  /* Optional per-meal tolerance */
+  .tol { display: flex; gap: 6px; margin-top: 7px; }
+  .tol-btn {
+    background: transparent; border: 1px solid var(--border); color: var(--muted);
+    border-radius: 999px; padding: 5px 11px; font-size: 12px; cursor: pointer; line-height: 1.1;
+    min-height: 30px; font-family: inherit;
+  }
+  .tol-btn.on[data-v="ok"] { background: rgba(55,201,120,.14); border-color: var(--good); color: var(--good); font-weight: 700; }
+  .tol-btn.on[data-v="much"] { background: rgba(255,93,93,.14); border-color: var(--bad); color: var(--bad); font-weight: 700; }
+  .tol-hint { color: var(--muted); font-size: 11.5px; line-height: 1.45; margin: 10px 2px 0; }
+  .evening-note {
+    color: var(--warn); font-size: 12px; line-height: 1.45; margin: 10px 2px 0;
+    background: rgba(240,176,62,.1); border: 1px solid rgba(240,176,62,.3);
+    border-radius: 10px; padding: 9px 11px;
+  }
+
+  /* What to do after a "Too much" meal */
+  .recovery {
+    background: var(--card); border: 1px solid rgba(240,176,62,.35); border-left: 3px solid var(--warn);
+    border-radius: 12px; padding: 12px 14px; margin-top: 12px;
+  }
+  .recovery summary { cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--warn); list-style: none; }
+  .recovery summary::-webkit-details-marker { display: none; }
+  .recovery summary::after { content: " ▾"; color: var(--muted); font-weight: 400; }
+  .recovery[open] summary::after { content: " ▴"; }
+  .recovery ul { margin: 10px 0 0; padding-left: 18px; color: var(--text); font-size: 13px; line-height: 1.55; }
+  .recovery li { margin-bottom: 6px; }
+  .recovery .fine { color: var(--muted); font-size: 11.5px; margin: 10px 0 0; line-height: 1.45; }
+  .recovery .sub { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .recovery .sub-title { font-size: 12.5px; font-weight: 700; color: var(--text); }
+  .recovery .sub ul { margin-top: 6px; }
+
+  /* When to step intake up */
+  .stepup { border-color: rgba(78,161,255,.3); border-left-color: var(--accent); margin-top: 10px; }
+  .stepup summary { color: var(--accent); }
+  .step-status { font-size: 12.5px; margin-top: 12px; color: var(--muted); line-height: 1.45; }
+  .step-status.ready { color: var(--good); font-weight: 600; }
+  .stepbtn {
+    margin-top: 10px; width: 100%; background: var(--card-2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 10px; padding: 11px; font-size: 13.5px; font-weight: 600; cursor: pointer;
+    font-family: inherit; min-height: 44px;
+  }
+  .stepbtn:disabled { opacity: .5; cursor: default; }
+
+  /* Save the whole day */
+  .saveday-wrap { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+  .saveday {
+    flex: 1; background: var(--card-2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; min-height: 46px;
+    font-family: inherit;
+  }
+  .saveday:disabled { opacity: .55; cursor: default; }
+  .saveday-msg { color: var(--good); font-size: 12.5px; min-width: 0; }
+
   /* Footer actions */
   .footer { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; }
   .footer button {
@@ -143,6 +220,10 @@
     border-radius: 10px; padding: 12px; font-size: 16px; outline: none;
   }
   .modal input:focus { border-color: var(--accent); }
+  .modal input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(0.8); opacity: .7; cursor: pointer; }
+  .modal .tol { margin-top: 6px; }
+  .modal .tol-btn { font-size: 13px; padding: 8px 14px; min-height: 38px; }
+  .modal .edit-day { color: var(--text); font-size: 13px; margin: 2px 0 0; font-weight: 600; }
   .modal .row { display: flex; gap: 8px; margin-top: 18px; }
   .modal .row button { flex: 1; padding: 12px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; }
   .modal .save { background: var(--accent); color: #fff; }
@@ -251,12 +332,19 @@
     <button id="todayBtn" class="today-btn" title="Jump to today">Today</button>
   </div>
 
+  <!-- Date selector (any previous day) -->
+  <div class="dayjump">
+    <input type="date" id="datePicker" aria-label="Jump to a date">
+    <span class="past-flag" id="pastFlag" hidden>Past day</span>
+  </div>
+
   <!-- Daily total -->
   <div class="total-card">
     <div class="total-num" id="totalNum">0</div>
-    <div class="total-label">calories today</div>
+    <div class="total-label" id="totalLabel">calories today</div>
     <div class="target-line none" id="targetLine">No daily target set</div>
     <div class="progress" id="progressWrap" style="display:none"><div id="progressBar"></div></div>
+    <div class="status-line" id="statusLine" style="display:none"><span class="sdot"></span><span id="statusText"></span></div>
   </div>
 
   <!-- Fast input -->
@@ -272,6 +360,54 @@
   <!-- Entries -->
   <ul class="entries" id="entriesList"></ul>
   <div class="empty-state" id="emptyState" style="display:none">No entries for this day yet.</div>
+  <p class="tol-hint">Tolerance is optional. Choose “Too much” if the meal caused prolonged fullness, significantly delayed the next meal, caused nausea/reflux, or disrupted sleep.</p>
+  <p class="tol-hint">Evening rule: the last meal of the day should be the smallest one — digestion is slowest right before bed.</p>
+  <p class="evening-note" id="eveningNote" style="display:none"></p>
+
+  <!-- Shown only when a meal on this day is marked "Too much" -->
+  <details class="recovery" id="recoveryPanel" style="display:none">
+    <summary>A meal was too much — what to do next</summary>
+    <ul>
+      <li><b>Keep the next meal.</b> Skipping or shrinking it to “make up for it” is what usually turns one hard meal into a setback.</li>
+      <li><b>Delay, don't drop.</b> Still too full at the usual time? Push it 30–60 minutes and eat then. A late meal beats a missing one.</li>
+      <li><b>Make it smaller and easier, not absent.</b> If a full portion feels impossible, have a lighter version and keep the rest of the day's schedule intact.</li>
+      <li><b>Keep the night end light.</b> The last meal of the day should be the smallest of the day — if your usual window is 350 kcal, the one before bed should sit under that. Digestion is slowest right before sleeping, so move the extra into an earlier meal instead.</li>
+      <li><b>Note it and move on.</b> “Too much” is information for next time's portion or timing — not something to correct today.</li>
+      <li><b>Look for the pattern.</b> If it keeps happening, bring these logged days to your dietitian or doctor; the pattern is what they need to adjust your plan.</li>
+    </ul>
+    <div class="sub">
+      <div class="sub-title">What “a smaller next meal” means</div>
+      <ul>
+        <li><b>Smaller, not skipped:</b> roughly half to two-thirds of your usual portion — a floor, not a target to go under.</li>
+        <li><b>Less volume, same energy:</b> liquid and soft foods leave the stomach faster than bulky ones. A milk or yogurt smoothie, a nutrition drink, yogurt with honey, custard, soup with olive oil, toast with peanut butter, a banana with nut butter.</li>
+        <li><b>Skip the volume traps:</b> big salads, raw vegetables, sparkling drinks and very high-fibre plates fill you up long before they feed you.</li>
+        <li><b>Sip it slowly</b> over 20–30 minutes rather than facing a full plate at once.</li>
+        <li><b>It's a bridge, not a new normal:</b> go back to your regular portion at the meal after it, even if that meal comes a bit late.</li>
+      </ul>
+    </div>
+    <p class="fine">General reminders, not medical advice. If you're in treatment, your care team's plan comes first.</p>
+  </details>
+
+  <!-- When to step intake up -->
+  <details class="recovery stepup" id="stepPanel">
+    <summary>Stepping up: when to add +100 kcal</summary>
+    <ul>
+      <li><b>Wait for 3 logged days in a row rated fully “OK”</b> — no “Too much”, nothing left unrated. That's the sign the current amount has settled.</li>
+      <li><b>Add the ~100 kcal in one place</b> — usually the meal or snack that feels easiest — instead of spreading it over every meal.</li>
+      <li><b>Hold the new amount 3–4 days</b> before the next step. An increase needs time to stop feeling like too much.</li>
+      <li><b>If “Too much” days come back, hold — don't go below.</b> Stay at the current amount until you get another clean streak, then step up again.</li>
+      <li><b>Agree the size and pace of the steps with your dietitian or doctor.</b></li>
+    </ul>
+    <div class="step-status" id="stepStatus"></div>
+    <button type="button" class="stepbtn" id="stepBtn">+100 to my daily target</button>
+    <p class="fine">General reminders, not medical advice. If you're in treatment, your care team's plan comes first.</p>
+  </details>
+
+  <!-- Save / submit the whole day (guarded against double presses) -->
+  <div class="saveday-wrap">
+    <button type="button" class="saveday" id="saveDayBtn">✓ Save this day</button>
+    <span class="saveday-msg" id="saveDayMsg"></span>
+  </div>
 
   <!-- Per-day sleep + notes -->
   <div class="daymeta">
@@ -298,10 +434,23 @@
 <div class="modal-bg" id="editModal">
   <div class="modal">
     <h3>Edit entry</h3>
+    <label>Day</label>
+    <p class="edit-day" id="editDay"></p>
     <label for="editCal">Calories</label>
     <input id="editCal" type="tel" inputmode="tel">
-    <label for="editNote">Note</label>
+    <label for="editNote">Food / note</label>
     <input id="editNote" type="text" placeholder="Optional">
+    <label for="editTime">Time</label>
+    <input id="editTime" type="time">
+    <label>Tolerance (optional)</label>
+    <div class="tol" id="editTol">
+      <button type="button" class="tol-btn" data-v="ok">OK</button>
+      <button type="button" class="tol-btn" data-v="much">Too much</button>
+    </div>
+    <p class="tol-hint">Choose “Too much” if the meal caused prolonged fullness, significantly delayed the next meal, caused nausea/reflux, or disrupted sleep.</p>
+    <div class="row">
+      <button class="cancel" id="editDelete" type="button" style="background:transparent;color:var(--bad);border:1px solid var(--border)!important">Delete</button>
+    </div>
     <div class="row">
       <button class="cancel" id="editCancel" type="button">Cancel</button>
       <button class="save" id="editSave" type="button">Save</button>
@@ -376,14 +525,21 @@
   var DATA_KEY = "ct.data";
   var CODE_KEY = "ct.syncCode";
   var POLL_MS = 15000;
+  var MAX_CAL = 20000;         // sanity ceiling for a single entry
+  var DUP_WINDOW_MS = 60000;   // identical entry within this window on the same day => likely a double submit
 
   // ---------- State ----------
-  var data = loadData();       // { entries:[{id,calories,note,ts,updated_at,dirty,deleted}], target, target_updated_at, target_dirty }
+  // entries: { id, calories, note, ts, tolerance:null|"ok"|"much", updated_at, dirty, deleted }
+  // `tolerance` is optional: older entries (and entries from a device on an older
+  // version) simply have null, which is a perfectly valid, unrated meal.
+  var data = loadData();
   var syncCode = resolveSyncCode();
   var sb = null;               // supabase client
   var viewDate = todayKey();
   var editingId = null;
-  var submitting = false;
+  var editTolerance = null;    // pending tolerance inside the edit modal
+  var submitting = false;      // guards the add-entry form against double submits
+  var daySubmitting = false;   // guards the "Save this day" button against double presses
   var syncing = false;
   var pendingSync = false;
   var lastSyncOk = false;
@@ -404,7 +560,8 @@
                          target_updated_at: now, target_dirty: (typeof o.target === "number") };
         (o.entries || []).forEach(function (e) {
           migrated.entries.push({ id: e.id || uuid(), calories: e.calories, note: e.note || "",
-                                  ts: e.ts || now, updated_at: now, dirty: true, deleted: false });
+                                  ts: e.ts || now, tolerance: normTolerance(e.tolerance),
+                                  updated_at: now, dirty: true, deleted: false });
         });
         return migrated;
       }
@@ -428,6 +585,7 @@
     d.entries.forEach(function (e) {
       if (!e.id) e.id = uuid();
       if (typeof e.updated_at !== "number") e.updated_at = e.ts || Date.now();
+      e.tolerance = normTolerance(e.tolerance);   // missing/garbage => unrated, never invalid
       e.dirty = !!e.dirty; e.deleted = !!e.deleted;
     });
     d.meals.forEach(function (m) {
@@ -441,6 +599,10 @@
 
   // Strictly-increasing timestamp so two edits in the same millisecond get distinct versions.
   function stamp(prev) { return Math.max(Date.now(), (prev || 0) + 1); }
+
+  // Only "ok" and "much" are meaningful; anything else (undefined, null, legacy junk) = not rated.
+  var TOL_LABELS = { ok: "OK", much: "Too much" };
+  function normTolerance(v) { return (v === "ok" || v === "much") ? v : null; }
 
   function uuid() {
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
@@ -510,6 +672,7 @@
         var eAt = e.updated_at; // clear dirty only if unchanged since this push started
         jobs.push(sb.from("entries").upsert({
           id: e.id, sync_code: syncCode, calories: e.calories, note: e.note,
+          tolerance: e.tolerance || null,
           eaten_at: new Date(e.ts).toISOString(), updated_at: new Date(e.updated_at).toISOString()
         }).then((function (e, eAt) { return function (r) { if (!r.error && e.updated_at === eAt) e.dirty = false; }; })(e, eAt)));
       }
@@ -560,10 +723,12 @@
         var sUpd = new Date(r.updated_at).getTime();
         if (!local) {
           data.entries.push({ id: r.id, calories: r.calories, note: r.note || "",
-            ts: new Date(r.eaten_at).getTime(), updated_at: sUpd, dirty: false, deleted: false });
+            ts: new Date(r.eaten_at).getTime(), tolerance: normTolerance(r.tolerance),
+            updated_at: sUpd, dirty: false, deleted: false });
         } else if (!local.dirty && sUpd > local.updated_at) {
           local.calories = r.calories; local.note = r.note || "";
           local.ts = new Date(r.eaten_at).getTime(); local.updated_at = sUpd;
+          local.tolerance = normTolerance(r.tolerance);
         }
       });
       // Rows deleted on another device: remove local clean copies no longer on the server
@@ -642,6 +807,34 @@
   function keyToDate(key) { var p = key.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
   function shiftDay(key, delta) { var dt = keyToDate(key); dt.setDate(dt.getDate() + delta); return dateKeyFromDate(dt); }
   function dayKeyOfEntry(e) { return dateKeyFromDate(new Date(e.ts)); }
+  function isValidDayKey(key) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(key || "")) return false;
+    var d = keyToDate(key);
+    return !isNaN(d.getTime()) && dateKeyFromDate(d) === key;
+  }
+  // Timestamp for a new entry on `key`: "now" for today, otherwise that date at the current clock time
+  // so historical entries stay on the day the user selected and never jump to today.
+  function tsForDay(key) {
+    var now = new Date();
+    if (key === todayKey()) return now.getTime();
+    var d = keyToDate(key);
+    d.setHours(now.getHours(), now.getMinutes(), 0, 0);
+    return d.getTime();
+  }
+  function timeValue(ts) {
+    var d = new Date(ts);
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
+  // Apply "HH:MM" to a timestamp, keeping its original calendar day.
+  function withTime(ts, hhmm) {
+    var m = /^(\d{1,2}):(\d{2})$/.exec(hhmm || "");
+    if (!m) return ts;
+    var h = +m[1], mi = +m[2];
+    if (h > 23 || mi > 59) return ts;
+    var d = new Date(ts);
+    d.setHours(h, mi, 0, 0);
+    return d.getTime();
+  }
 
   // ---------- Derived ----------
   function visibleEntries() {
@@ -654,6 +847,50 @@
   }
   function totalForDay(key) {
     return entriesForDay(key).reduce(function (s, e) { return s + e.calories; }, 0);
+  }
+  // Daily tolerance status. A partially rated day is never reported as fully "Within tolerance".
+  //   exceeded  – at least one meal marked "Too much"
+  //   ok        – every meal on the day is rated and all are "OK"
+  //   partial   – some meals rated OK, others still unrated
+  //   unrated   – nothing rated (including an empty day)
+  function dayStatus(key) {
+    var items = entriesForDay(key);
+    var rated = items.filter(function (e) { return e.tolerance; });
+    if (rated.some(function (e) { return e.tolerance === "much"; })) {
+      return { code: "exceeded", label: "Exceeded tolerance", rated: rated.length, total: items.length };
+    }
+    if (!rated.length) return { code: "unrated", label: "Not rated", rated: 0, total: items.length };
+    if (rated.length < items.length) {
+      return { code: "partial", label: "Partly rated — " + rated.length + "/" + items.length + " OK", rated: rated.length, total: items.length };
+    }
+    return { code: "ok", label: "Within tolerance", rated: rated.length, total: items.length };
+  }
+  // The last meal of the day should be the smallest — digestion is slowest right before bed.
+  // Returns null when there's nothing to say (fewer than two meals, or the rule already holds).
+  function eveningCheck(key) {
+    var items = entriesForDay(key);
+    if (items.length < 2) return null;
+    var asc = items.slice().sort(function (a, b) { return a.ts - b.ts; });
+    var last = asc[asc.length - 1];
+    var earlier = asc.slice(0, -1);
+    var smallestEarlier = earlier.reduce(function (m, e) { return e.calories < m.calories ? e : m; }, earlier[0]);
+    if (last.calories <= smallestEarlier.calories) return null;
+    return { last: last, smallest: smallestEarlier, over: last.calories - smallestEarlier.calories };
+  }
+  // A day counts toward stepping up only if it has meals AND every one of them is rated "OK".
+  function isCleanDay(key) { return dayStatus(key).code === "ok"; }
+  // Readiness to add ~100 kcal: STEP_STREAK consecutive days (ending yesterday or today)
+  // fully rated "OK". Purely derived from the user's own logs — it suggests, it never decides.
+  var STEP_STREAK = 3;
+  function progressReadiness() {
+    var streak = 0, key = todayKey();
+    // today only counts once it has meals logged; otherwise start from yesterday
+    if (!entriesForDay(key).length) key = shiftDay(key, -1);
+    for (var i = 0; i < STEP_STREAK; i++) {
+      if (!isCleanDay(key)) break;
+      streak++; key = shiftDay(key, -1);
+    }
+    return { streak: streak, need: STEP_STREAK, ready: streak >= STEP_STREAK };
   }
   function visibleMeals() {
     return data.meals.filter(function (m) { return !m.deleted; })
@@ -695,6 +932,7 @@
     return keyToDate(key).toLocaleDateString(undefined, { weekday: "long" });
   }
   function fmtDayDate(key) { return keyToDate(key).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" }); }
+  function fmtDayShort(key) { return keyToDate(key).toLocaleDateString(undefined, { month: "short", day: "numeric" }); }
   function fmtTime(ts) { return new Date(ts).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }); }
 
   // ---------- Render ----------
@@ -707,13 +945,27 @@
     dayDate: document.getElementById("dayDate"),
     list: document.getElementById("entriesList"),
     emptyState: document.getElementById("emptyState"),
-    nextDay: document.getElementById("nextDay")
+    nextDay: document.getElementById("nextDay"),
+    datePicker: document.getElementById("datePicker"),
+    pastFlag: document.getElementById("pastFlag"),
+    totalLabel: document.getElementById("totalLabel"),
+    statusLine: document.getElementById("statusLine"),
+    statusText: document.getElementById("statusText"),
+    recovery: document.getElementById("recoveryPanel"),
+    eveningNote: document.getElementById("eveningNote"),
+    stepStatus: document.getElementById("stepStatus"),
+    stepBtn: document.getElementById("stepBtn")
   };
 
   function render() {
+    var isToday = (viewDate === todayKey());
     el.dayName.textContent = fmtDayName(viewDate);
     el.dayDate.textContent = fmtDayDate(viewDate);
     el.nextDay.disabled = (viewDate >= todayKey());
+    el.datePicker.max = todayKey();
+    if (document.activeElement !== el.datePicker) el.datePicker.value = viewDate;
+    el.pastFlag.hidden = isToday;
+    el.totalLabel.textContent = isToday ? "calories today" : "calories on " + fmtDayShort(viewDate);
 
     var total = totalForDay(viewDate);
     el.totalNum.textContent = fmtNum(total);
@@ -751,6 +1003,7 @@
       else { note.className = "note empty"; note.textContent = "No note"; }
       var time = document.createElement("div"); time.className = "time"; time.textContent = fmtTime(e.ts);
       info.appendChild(note); info.appendChild(time);
+      info.appendChild(buildTolControl(e));
       var acts = document.createElement("div"); acts.className = "acts";
       var edit = document.createElement("button"); edit.textContent = "✎"; edit.title = "Edit";
       edit.onclick = function () { openEdit(e.id); };
@@ -761,8 +1014,68 @@
       el.list.appendChild(li);
     });
 
+    renderStatus();
     renderQuick();
     renderDayMeta();
+  }
+
+  // Two optional pills per meal. Tapping the active one clears it (a mis-tap is undoable),
+  // and they work on any day — including meals recorded days ago.
+  function buildTolControl(e) {
+    var wrap = document.createElement("div");
+    wrap.className = "tol";
+    Object.keys(TOL_LABELS).forEach(function (v) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "tol-btn" + (e.tolerance === v ? " on" : "");
+      b.setAttribute("data-v", v);
+      b.setAttribute("aria-pressed", e.tolerance === v ? "true" : "false");
+      b.textContent = TOL_LABELS[v];
+      b.onclick = function () { setTolerance(e.id, e.tolerance === v ? null : v); };
+      wrap.appendChild(b);
+    });
+    return wrap;
+  }
+
+  // Daily tolerance status + the two guidance panels, all derived from the logs.
+  function renderStatus() {
+    var st = dayStatus(viewDate);
+    if (!st.total) {
+      el.statusLine.style.display = "none";
+    } else {
+      el.statusLine.style.display = "inline-flex";
+      el.statusLine.className = "status-line " + st.code;
+      el.statusText.textContent = st.label;
+    }
+    el.recovery.style.display = (st.code === "exceeded") ? "block" : "none";
+
+    var ev = eveningCheck(viewDate);
+    if (ev) {
+      el.eveningNote.style.display = "block";
+      el.eveningNote.textContent = "Last meal of the day is " + fmtNum(ev.last.calories) + " kcal — " +
+        fmtNum(ev.over) + " more than your smallest meal today (" + fmtNum(ev.smallest.calories) + "). " +
+        "Digestion is slowest before bed: try shifting some of that into an earlier meal so the last one is the smallest.";
+    } else {
+      el.eveningNote.style.display = "none";
+      el.eveningNote.textContent = "";
+    }
+
+    var pr = progressReadiness();
+    if (pr.ready) {
+      el.stepStatus.className = "step-status ready";
+      el.stepStatus.textContent = "✓ " + pr.need + " days in a row fully rated OK — a good moment to talk about a step up.";
+    } else {
+      el.stepStatus.className = "step-status";
+      el.stepStatus.textContent = "Clean streak: " + pr.streak + "/" + pr.need +
+        " days. " + (pr.need - pr.streak) + " more fully-OK day" + ((pr.need - pr.streak) === 1 ? "" : "s") + " before stepping up.";
+    }
+    if (data.target && data.target > 0) {
+      el.stepBtn.disabled = false;
+      el.stepBtn.textContent = "+100 → " + fmtNum(data.target + 100) + " kcal/day target";
+    } else {
+      el.stepBtn.disabled = true;
+      el.stepBtn.textContent = "Set a daily target first to step it up";
+    }
   }
 
   // Populate the sleep/note inputs for the viewed day (without clobbering an input being edited).
@@ -796,11 +1109,58 @@
   }
 
   // ---------- Mutations ----------
-  function addEntry(calories, note) {
-    var now = Date.now();
-    data.entries.push({ id: uuid(), calories: calories, note: note, ts: now, updated_at: now, dirty: true, deleted: false });
-    viewDate = todayKey(); // entries log to now — make sure the user sees them
+  function validCalories(v) { return typeof v === "number" && isFinite(v) && v > 0 && v <= MAX_CAL; }
+
+  // An identical entry (same day, same calories, same note) logged within a minute is
+  // almost always a double submit rather than a real second helping.
+  function findDuplicate(calories, note, ts, exceptId) {
+    var key = dateKeyFromDate(new Date(ts));
+    var n = (note || "").trim().toLowerCase();
+    return visibleEntries().filter(function (e) {
+      return e.id !== exceptId && e.calories === calories &&
+             (e.note || "").trim().toLowerCase() === n &&
+             dayKeyOfEntry(e) === key && Math.abs(e.ts - ts) < DUP_WINDOW_MS;
+    })[0] || null;
+  }
+
+  // Adds an entry to the day currently being viewed (today or any past day).
+  // Returns the new entry, or null if it was rejected (invalid, or a duplicate without force).
+  function addEntry(calories, note, opts) {
+    opts = opts || {};
+    if (!validCalories(calories)) return null;
+    var day = opts.day || viewDate;
+    if (!isValidDayKey(day) || day > todayKey()) return null;
+    var ts = (typeof opts.ts === "number") ? opts.ts : tsForDay(day);
+    if (!opts.force && findDuplicate(calories, note, ts)) return null;
+    var e = {
+      id: uuid(), calories: calories, note: (note || "").trim(), ts: ts,
+      tolerance: normTolerance(opts.tolerance), updated_at: Date.now(), dirty: true, deleted: false
+    };
+    data.entries.push(e);
+    save(); render(); syncNow();   // the day's total is recomputed from the entries on every render
+    return e;
+  }
+
+  // UI-facing add: reports validation problems and asks before creating a likely duplicate.
+  function submitEntry(calories, note, opts) {
+    if (!validCalories(calories)) {
+      alert("Enter a number of calories between 1 and " + fmtNum(MAX_CAL) + " (a sum like 200+150 works too).");
+      return null;
+    }
+    var e = addEntry(calories, note, opts);
+    if (e) return e;
+    if (!confirm("You already logged an identical entry on this day at almost the same time.\n\nAdd it again anyway?")) return null;
+    return addEntry(calories, note, { force: true, day: (opts && opts.day) || viewDate, tolerance: opts && opts.tolerance });
+  }
+
+  // Tolerance can be set — or changed, or cleared — at any time after the meal was recorded.
+  function setTolerance(id, value) {
+    var e = findEntry(id);
+    if (!e || e.deleted) return false;
+    e.tolerance = normTolerance(value);
+    e.dirty = true; e.updated_at = stamp(e.updated_at);
     save(); render(); syncNow();
+    return true;
   }
   function addMeal(name, calories) {
     var now = Date.now();
@@ -815,7 +1175,7 @@
   }
   function logMeal(id) {
     var m = findMeal(id);
-    if (m) addEntry(m.calories, m.name);
+    if (m) submitEntry(m.calories, m.name);   // logs to the day being viewed, past days included
   }
   // Per-day sleep time / note for the currently viewed day.
   function setDayField(field, value, localOnly) {
@@ -827,30 +1187,80 @@
     save();
     if (!localOnly) syncNow();
   }
-  function deleteEntry(id) {
-    if (!confirm("Delete this entry?")) return;
+  // Deletes on any day, current or historical. Returns false if the user cancels.
+  function deleteEntry(id, opts) {
     var e = findEntry(id);
-    if (!e) return;
+    if (!e || e.deleted) return false;
+    if (!(opts && opts.skipConfirm)) {
+      var when = fmtDayShort(dayKeyOfEntry(e)) + " · " + fmtTime(e.ts);
+      if (!confirm("Delete this entry?\n\n" + fmtNum(e.calories) + " kcal — " + (e.note || "no note") + "\n" + when)) return false;
+    }
     e.deleted = true; e.dirty = true; e.updated_at = stamp(e.updated_at);
-    save(); render(); syncNow();
+    save(); render(); syncNow();                // total for that day recalculates on render
+    return true;
   }
   function openEdit(id) {
     var e = findEntry(id);
-    if (!e) return;
+    if (!e || e.deleted) return;
     editingId = id;
+    editTolerance = e.tolerance;
+    document.getElementById("editDay").textContent = fmtDayName(dayKeyOfEntry(e)) + " · " + fmtDayDate(dayKeyOfEntry(e));
     document.getElementById("editCal").value = e.calories;
     document.getElementById("editNote").value = e.note || "";
+    document.getElementById("editTime").value = timeValue(e.ts);
+    renderEditTol();
     document.getElementById("editModal").classList.add("show");
     document.getElementById("editCal").focus();
   }
-  function closeEdit() { editingId = null; document.getElementById("editModal").classList.remove("show"); }
+  function renderEditTol() {
+    var btns = document.getElementById("editTol").children;
+    for (var i = 0; i < btns.length; i++) {
+      var v = btns[i].getAttribute("data-v");
+      btns[i].className = "tol-btn" + (editTolerance === v ? " on" : "");
+      btns[i].setAttribute("aria-pressed", editTolerance === v ? "true" : "false");
+    }
+  }
+  function closeEdit() { editingId = null; editTolerance = null; document.getElementById("editModal").classList.remove("show"); }
   function saveEdit() {
-    if (!editingId) return;
-    var val = parseCalories(document.getElementById("editCal").value);
-    if (!(val > 0)) { alert("Calories must be a positive number."); return; }
+    if (!editingId) return false;
     var e = findEntry(editingId);
-    if (e) { e.calories = val; e.note = document.getElementById("editNote").value.trim(); e.dirty = true; e.updated_at = stamp(e.updated_at); }
+    if (!e || e.deleted) { closeEdit(); return false; }
+    var val = parseCalories(document.getElementById("editCal").value);
+    if (!validCalories(val)) { alert("Calories must be a number between 1 and " + fmtNum(MAX_CAL) + "."); return false; }
+    var timeStr = document.getElementById("editTime").value;
+    // Changing the time only moves the entry within its own day — it never re-dates it.
+    var newTs = timeStr ? withTime(e.ts, timeStr) : e.ts;
+    if (timeStr && newTs === e.ts && timeValue(e.ts) !== timeStr) { alert("Enter a valid time."); return false; }
+    e.calories = val;
+    e.note = document.getElementById("editNote").value.trim();
+    e.ts = newTs;
+    e.tolerance = normTolerance(editTolerance);
+    e.dirty = true; e.updated_at = stamp(e.updated_at);
     save(); closeEdit(); render(); syncNow();
+    return true;
+  }
+
+  // "Save this day": flushes everything pending for the viewed day to the server.
+  // Entries already persist as you type them; this is the explicit confirmation,
+  // and the guard makes a second press a no-op instead of a second write.
+  function submitDay() {
+    if (daySubmitting) return false;
+    daySubmitting = true;
+    var btn = document.getElementById("saveDayBtn");
+    var msg = document.getElementById("saveDayMsg");
+    if (btn) btn.disabled = true;
+    if (msg) msg.textContent = "";
+    var done = function () {
+      daySubmitting = false;
+      if (btn) btn.disabled = false;
+      if (msg) {
+        msg.textContent = (sb && lastSyncOk) ? "Saved ✓" : "Saved on this device ✓";
+        setTimeout(function () { if (msg) msg.textContent = ""; }, 2500);
+      }
+    };
+    save();
+    Promise.resolve(syncNow()).then(done, done);
+    return true;
   }
 
   // ---------- Enter submits from either input ----------
@@ -868,22 +1278,47 @@
   // ---------- Form submit (double-submit guard) ----------
   document.getElementById("entryForm").addEventListener("submit", function (ev) {
     ev.preventDefault();
-    if (submitting) return;
+    if (submitting) return;                      // a second press while the first is in flight does nothing
     var calInput = document.getElementById("calInput");
     var noteInput = document.getElementById("noteInput");
     var val = parseCalories(calInput.value);
-    if (!(val > 0)) { alert("Enter a positive number of calories (you can add a sum like 200+150)."); calInput.focus(); return; }
+    if (!validCalories(val)) {
+      alert("Enter a number of calories between 1 and " + fmtNum(MAX_CAL) + " (you can add a sum like 200+150).");
+      calInput.focus();
+      return;
+    }
     submitting = true;
     var btn = document.getElementById("addBtn"); btn.disabled = true;
-    addEntry(val, noteInput.value.trim());
-    calInput.value = ""; noteInput.value = ""; calInput.focus();
+    var added = submitEntry(val, noteInput.value.trim());
+    if (added) { calInput.value = ""; noteInput.value = ""; }
+    calInput.focus();
     setTimeout(function () { submitting = false; btn.disabled = false; }, 250);
   });
 
   // ---------- Day navigation ----------
-  document.getElementById("prevDay").onclick = function () { viewDate = shiftDay(viewDate, -1); render(); };
-  document.getElementById("nextDay").onclick = function () { if (viewDate < todayKey()) { viewDate = shiftDay(viewDate, 1); render(); } };
-  document.getElementById("todayBtn").onclick = function () { viewDate = todayKey(); render(); };
+  function goToDay(key) {
+    if (!isValidDayKey(key)) return false;
+    if (key > todayKey()) return false;          // no logging into the future
+    viewDate = key;
+    render();
+    return true;
+  }
+  document.getElementById("prevDay").onclick = function () { goToDay(shiftDay(viewDate, -1)); };
+  document.getElementById("nextDay").onclick = function () { if (viewDate < todayKey()) goToDay(shiftDay(viewDate, 1)); };
+  document.getElementById("todayBtn").onclick = function () { goToDay(todayKey()); };
+  document.getElementById("datePicker").addEventListener("change", function () {
+    if (!goToDay(this.value)) { alert("Pick a valid date up to today."); this.value = viewDate; }
+  });
+
+  // ---------- Save the day / step up ----------
+  document.getElementById("saveDayBtn").onclick = function () { submitDay(); };
+  document.getElementById("stepBtn").onclick = function () {
+    if (!(data.target > 0)) return;
+    var next = data.target + 100;
+    if (!confirm("Raise your daily target from " + fmtNum(data.target) + " to " + fmtNum(next) + " kcal?")) return;
+    data.target = next; data.target_updated_at = Date.now(); data.target_dirty = true;
+    save(); render(); syncNow();
+  };
 
   // ---------- Target ----------
   document.getElementById("targetBtn").onclick = function () {
@@ -1026,9 +1461,25 @@
   // ---------- Edit modal wiring ----------
   document.getElementById("editSave").onclick = saveEdit;
   document.getElementById("editCancel").onclick = closeEdit;
+  document.getElementById("editDelete").onclick = function () {
+    var id = editingId;
+    if (id && deleteEntry(id)) closeEdit();
+  };
   document.getElementById("editModal").addEventListener("click", function (ev) { if (ev.target === this) closeEdit(); });
   document.getElementById("editCal").addEventListener("keydown", function (ev) { if (ev.key === "Enter") saveEdit(); });
   document.getElementById("editNote").addEventListener("keydown", function (ev) { if (ev.key === "Enter") saveEdit(); });
+  (function () {
+    var btns = document.getElementById("editTol").children;
+    for (var i = 0; i < btns.length; i++) {
+      (function (b) {
+        b.onclick = function () {
+          var v = b.getAttribute("data-v");
+          editTolerance = (editTolerance === v) ? null : v;   // tap again to clear
+          renderEditTol();
+        };
+      })(btns[i]);
+    }
+  })();
 
   // ---------- Sync modal ----------
   function openSync() {
@@ -1107,6 +1558,38 @@
   document.getElementById("calInput").focus();
   render();
   syncNow();
+
+  // ---------- Test hook ----------
+  // Lets tests/app.test.mjs drive exactly the code the browser runs. Harmless in the app.
+  window.CT = {
+    state: function () { return { data: data, viewDate: viewDate, submitting: submitting, daySubmitting: daySubmitting }; },
+    goToDay: goToDay,
+    addEntry: addEntry,
+    submitEntry: submitEntry,
+    setTolerance: setTolerance,
+    deleteEntry: deleteEntry,
+    openEdit: openEdit,
+    saveEdit: saveEdit,
+    closeEdit: closeEdit,
+    submitDay: submitDay,
+    dayStatus: dayStatus,
+    totalForDay: totalForDay,
+    entriesForDay: entriesForDay,
+    findDuplicate: findDuplicate,
+    progressReadiness: progressReadiness,
+    eveningCheck: eveningCheck,
+    parseCalories: parseCalories,
+    normTolerance: normTolerance,
+    isValidDayKey: isValidDayKey,
+    dateKeyFromDate: dateKeyFromDate,
+    dayKeyOfEntry: dayKeyOfEntry,
+    todayKey: todayKey,
+    shiftDay: shiftDay,
+    tsForDay: tsForDay,
+    withTime: withTime,
+    timeValue: timeValue,
+    render: render
+  };
 
   // Register the service worker (offline support + install as an app)
   if ("serviceWorker" in navigator) {

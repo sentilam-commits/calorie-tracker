@@ -9,7 +9,10 @@ A tiny, private calorie tracker that **syncs across your devices** (phone + comp
 - Each entry saves its **date and time** automatically.
 - **Edit** or **delete** any entry; the total recalculates immediately.
 - A **new day starts automatically** each calendar day. Old days are kept.
-- Browse **previous days** with the ‹ / › arrows (or the **Today** button).
+- Browse **previous days** with the ‹ / › arrows, the **date selector**, the calendar, or the **Today** button.
+- **Work on any past day**: add, edit and delete meals there. New entries stay on the day you're viewing, never jump to today, and the day's total recalculates on every change. A **Past day** badge and the total's caption ("calories on Aug 1") always show which date you're on. **✓ Save this day** pushes the day to your other devices; pressing it twice does nothing extra.
+- Optional **meal tolerance** — mark any meal **OK** or **Too much**, at any time after eating it (nothing is selected by default, and meals logged before this existed stay valid as unrated). The day then shows a small status under the total: *Within tolerance* (every meal rated OK), *Exceeded tolerance* (at least one "Too much"), *Partly rated* (some meals still unrated — never counted as a full "within tolerance"), or *Not rated*.
+- Two short guidance notes derived from your own logs: **what to do after a "Too much" meal** (shown only on days that have one) and **when to step intake up by ~100 kcal** (after 3 consecutive days rated fully OK). Plus an **evening check** when the last meal of a day isn't the smallest one.
 - Optional **daily target** — shows calories left, or how far over.
 - **Cross-device sync** via Supabase (see below).
 - **Export / Import** your data as a JSON file for backups.
@@ -31,7 +34,8 @@ The status pill at the top shows: **Synced** (green), **Syncing…**, or **Offli
 ## Backend (already set up)
 
 - Supabase project: **calorie-tracker** (`gxzhaxhelnftyksjiedk`)
-- Tables: `entries`, `settings` — both with Row-Level Security keyed on the sync code.
+- Tables: `entries`, `settings`, `meals`, `days` — all with Row-Level Security keyed on the sync code.
+- `entries.tolerance` is a nullable `text` column constrained to `'ok' | 'much'`. `NULL` means "not rated", so every pre-existing row stayed valid and older devices that don't send the column can't overwrite it.
 - The app's `index.html` already contains the project URL and the **publishable** (anon) key. These are safe to ship in client code; your data is protected by the secret sync code + RLS.
 
 ## Running locally
@@ -44,6 +48,14 @@ python3 -m http.server 8000
 ```
 
 (Sync works either way, as long as you're online.)
+
+## Tests
+
+```bash
+node --test tests/app.test.mjs
+```
+
+No dependencies and no build. `tests/harness.mjs` extracts the inline app script from `index.html` and runs it in a `node:vm` context with a small DOM/localStorage stub, so the tests drive the exact code the browser runs (offline — the Supabase client is never created). Coverage: historical-date handling, total recalculation, tolerance and daily status, editing, deletion, persistence across reloads, backward compatibility with pre-tolerance data, and duplicate-submission guards.
 
 ## Deploying to Vercel (so both devices open the same URL)
 
