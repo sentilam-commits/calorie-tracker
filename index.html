@@ -130,7 +130,13 @@
   .entries .info { flex: 1; min-width: 0; }
   .entries .info .note { font-size: 15px; word-break: break-word; }
   .entries .info .note.empty { color: var(--muted); font-style: italic; }
-  .entries .info .time { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .entries .info .time-edit {
+    display: inline-block; margin-top: 4px; font-family: inherit; font-size: 12px;
+    background: var(--card-2); border: 1px solid var(--border); color: var(--muted);
+    border-radius: 8px; padding: 4px 8px; outline: none; min-height: 30px; cursor: pointer;
+  }
+  .entries .info .time-edit:focus { border-color: var(--accent); color: var(--text); }
+  .entries .info .time-edit::-webkit-calendar-picker-indicator { filter: invert(0.8); opacity: .55; cursor: pointer; }
   .entries .acts { display: flex; gap: 6px; flex: none; }
   .entries .acts button {
     background: var(--card-2); border: 1px solid var(--border); color: var(--muted);
@@ -182,16 +188,6 @@
     font-family: inherit; min-height: 44px;
   }
   .stepbtn:disabled { opacity: .5; cursor: default; }
-
-  /* Save the whole day */
-  .saveday-wrap { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
-  .saveday {
-    flex: 1; background: var(--card-2); border: 1px solid var(--border); color: var(--text);
-    border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; min-height: 46px;
-    font-family: inherit;
-  }
-  .saveday:disabled { opacity: .55; cursor: default; }
-  .saveday-msg { color: var(--good); font-size: 12.5px; min-width: 0; }
 
   /* Footer actions */
   .footer { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; }
@@ -417,11 +413,6 @@
     <p class="fine">General reminders, not medical advice. If you're in treatment, your care team's plan comes first.</p>
   </details>
 
-  <!-- Save / submit the whole day (guarded against double presses) -->
-  <div class="saveday-wrap">
-    <button type="button" class="saveday" id="saveDayBtn">✓ Save this day</button>
-    <span class="saveday-msg" id="saveDayMsg"></span>
-  </div>
 
   <!-- Per-day sleep + notes -->
   <div class="daymeta">
@@ -554,7 +545,6 @@
   var editTolerance = null;    // pending tolerance inside the edit modal
   var recoveryOpenedFor = null; // day whose "Too much" guidance was auto-opened
   var submitting = false;      // guards the add-entry form against double submits
-  var daySubmitting = false;   // guards the "Save this day" button against double presses
   var syncing = false;
   var pendingSync = false;
   var lastSyncOk = false;
@@ -1016,8 +1006,7 @@
       var note = document.createElement("div");
       if (e.note) { note.className = "note"; note.textContent = e.note; }
       else { note.className = "note empty"; note.textContent = "No note"; }
-      var time = document.createElement("div"); time.className = "time"; time.textContent = fmtTime(e.ts);
-      info.appendChild(note); info.appendChild(time);
+      info.appendChild(note); info.appendChild(buildTimeControl(e));
       info.appendChild(buildTolControl(e));
       var acts = document.createElement("div"); acts.className = "acts";
       var edit = document.createElement("button"); edit.textContent = "✎"; edit.title = "Edit";
@@ -1032,6 +1021,21 @@
     renderStatus();
     renderQuick();
     renderDayMeta();
+  }
+
+  // The meal's time, editable in place: tapping it opens the phone's time picker.
+  // It only ever moves the meal within its own day.
+  function buildTimeControl(e) {
+    var t = document.createElement("input");
+    t.type = "time";
+    t.className = "time-edit";
+    t.value = timeValue(e.ts);
+    t.title = "Change the time of this meal";
+    t.setAttribute("aria-label", "Time of this meal");
+    t.onchange = function () {
+      if (!setEntryTime(e.id, t.value)) t.value = timeValue(e.ts);   // put back an unusable value
+    };
+    return t;
   }
 
   // Two optional pills per meal. Tapping the active one clears it (a mis-tap is undoable),
@@ -1263,26 +1267,15 @@
     return true;
   }
 
-  // "Save this day": flushes everything pending for the viewed day to the server.
-  // Entries already persist as you type them; this is the explicit confirmation,
-  // and the guard makes a second press a no-op instead of a second write.
-  function submitDay() {
-    if (daySubmitting) return false;
-    daySubmitting = true;
-    var btn = document.getElementById("saveDayBtn");
-    var msg = document.getElementById("saveDayMsg");
-    if (btn) btn.disabled = true;
-    if (msg) msg.textContent = "";
-    var done = function () {
-      daySubmitting = false;
-      if (btn) btn.disabled = false;
-      if (msg) {
-        msg.textContent = (sb && lastSyncOk) ? "Saved ✓" : "Saved on this device ✓";
-        setTimeout(function () { if (msg) msg.textContent = ""; }, 2500);
-      }
-    };
-    save();
-    Promise.resolve(syncNow()).then(done, done);
+  // Change the time of a meal from its row. The entry keeps its own calendar day —
+  // only the time of day moves. Returns false if the time is unusable.
+  function setEntryTime(id, hhmm) {
+    var e = findEntry(id);
+    if (!e || e.deleted) return false;
+    var ts = withTime(e.ts, hhmm);
+    if (ts === e.ts) return timeValue(e.ts) === hhmm;   // unchanged, or rejected as invalid
+    e.ts = ts; e.dirty = true; e.updated_at = stamp(e.updated_at);
+    save(); render(); syncNow();
     return true;
   }
 
@@ -1330,8 +1323,7 @@
   document.getElementById("nextDay").onclick = function () { if (viewDate < todayKey()) goToDay(shiftDay(viewDate, 1)); };
   document.getElementById("todayBtn").onclick = function () { goToDay(todayKey()); };
 
-  // ---------- Save the day / step up ----------
-  document.getElementById("saveDayBtn").onclick = function () { submitDay(); };
+  // ---------- Step up ----------
   document.getElementById("stepBtn").onclick = function () {
     if (!(data.target > 0)) return;
     var next = data.target + 100;
@@ -1582,7 +1574,7 @@
   // ---------- Test hook ----------
   // Lets tests/app.test.mjs drive exactly the code the browser runs. Harmless in the app.
   window.CT = {
-    state: function () { return { data: data, viewDate: viewDate, submitting: submitting, daySubmitting: daySubmitting }; },
+    state: function () { return { data: data, viewDate: viewDate, submitting: submitting }; },
     goToDay: goToDay,
     addEntry: addEntry,
     submitEntry: submitEntry,
@@ -1591,7 +1583,7 @@
     openEdit: openEdit,
     saveEdit: saveEdit,
     closeEdit: closeEdit,
-    submitDay: submitDay,
+    setEntryTime: setEntryTime,
     dayStatus: dayStatus,
     totalForDay: totalForDay,
     entriesForDay: entriesForDay,

@@ -413,15 +413,54 @@ test("invalid calories are refused by the form", () => {
   assert.match(app.lastAlert(), /between 1 and/);
 });
 
-test("'Save this day' ignores a second press while it is running", () => {
+// ------------------------------------------------------ per-entry time control
+
+test("the time control on a row moves the meal within its own day", () => {
   const app = loadApp();
   const { CT, document } = app;
-  CT.addEntry(300, "comida");
+  const past = CT.shiftDay(CT.todayKey(), -3);
+  CT.goToDay(past);
+  const e = CT.addEntry(300, "cena", { ts: CT.withTime(CT.tsForDay(past), "19:00") });
 
-  assert.equal(CT.submitDay(), true);
-  assert.equal(CT.submitDay(), false, "second press is a no-op");
-  assert.equal(document.getElementById("saveDayBtn").disabled, true);
-  assert.equal(CT.entriesForDay(CT.todayKey()).length, 1, "saving never duplicates entries");
+  const input = document.getElementById("entriesList").children[0].children[1].children[1];
+  assert.equal(input.tagName, "INPUT");
+  assert.equal(input.value, "19:00");
+
+  input.value = "21:15";
+  input.dispatch("change");
+
+  const saved = CT.entriesForDay(past)[0];
+  assert.equal(CT.timeValue(saved.ts), "21:15");
+  assert.equal(CT.dayKeyOfEntry(saved), past, "still on the same date");
+  assert.equal(saved.dirty, true, "queued for sync");
+});
+
+test("an unusable time is refused and the control snaps back", () => {
+  const app = loadApp();
+  const { CT, document } = app;
+  const e = CT.addEntry(300, "comida", { ts: CT.withTime(Date.now(), "12:00") });
+
+  assert.equal(CT.setEntryTime(e.id, "99:99"), false);
+  assert.equal(CT.setEntryTime(e.id, ""), false);
+  assert.equal(CT.timeValue(CT.entriesForDay(CT.todayKey())[0].ts), "12:00");
+
+  const input = document.getElementById("entriesList").children[0].children[1].children[1];
+  input.value = "aa:bb";
+  input.dispatch("change");
+  assert.equal(input.value, "12:00", "control shows the unchanged time again");
+});
+
+test("reordering follows the edited time", () => {
+  const app = loadApp();
+  const { CT } = app;
+  const day = CT.todayKey();
+  const a = CT.addEntry(200, "a", { ts: CT.withTime(Date.now(), "09:00") });
+  const b = CT.addEntry(300, "b", { ts: CT.withTime(Date.now(), "13:00") });
+
+  const order = () => CT.entriesForDay(day).map((e) => e.note).join(",");
+  assert.equal(order(), "b,a", "newest first");
+  CT.setEntryTime(a.id, "20:00");
+  assert.equal(order(), "a,b", "moving 'a' to 20:00 puts it on top");
 });
 
 // ------------------------------------------------------------ persistence
