@@ -1,6 +1,6 @@
 // Service worker: makes the app launch instantly and work offline.
 // Bump CACHE when the app shell or the pinned Supabase version changes.
-const CACHE = "ct-cache-v3";
+const CACHE = "ct-cache-v4";
 const ASSETS = [
   "./",
   "./index.html",

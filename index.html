@@ -143,6 +143,9 @@
     border-radius: 10px; padding: 12px; font-size: 16px; outline: none;
   }
   .modal input:focus { border-color: var(--accent); }
+  .modal input[type="date"], .modal input[type="time"] { min-height: 46px; }
+  .modal input::-webkit-calendar-picker-indicator { filter: invert(0.8); opacity: .7; cursor: pointer; }
+  .when-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .modal .row { display: flex; gap: 8px; margin-top: 18px; }
   .modal .row button { flex: 1; padding: 12px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; }
   .modal .save { background: var(--accent); color: #fff; }
@@ -159,6 +162,18 @@
   .daylabel.tappable { cursor: pointer; border-radius: 10px; padding: 4px 8px; transition: background .12s; }
   .daylabel.tappable:hover { background: var(--card); }
   .daylabel .caret { font-size: 10px; color: var(--muted); margin-left: 4px; }
+
+  /* "You are adding to a past day" banner */
+  .add-context {
+    display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;
+    background: rgba(240, 176, 62, .1); border: 1px solid rgba(240, 176, 62, .35);
+    border-radius: 10px; padding: 9px 12px; margin: -8px 0 14px;
+    font-size: 13px; color: var(--warn); text-align: center;
+  }
+  .add-context button {
+    background: none; border: none; color: var(--accent); font: inherit; font-weight: 600;
+    cursor: pointer; padding: 0; text-decoration: underline;
+  }
 
   /* Quick-add meal chips */
   .quick { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 10px; margin: -6px 0 12px; -webkit-overflow-scrolling: touch; }
@@ -193,6 +208,7 @@
   .cal-cell.over .kc { color: var(--bad); }
   .cal-cell.plain .kc { color: var(--accent); }
   .cal-cell.today { border-color: var(--accent); }
+  .cal-cell.future { opacity: .32; cursor: default; }
   .cal-cell.selected { background: var(--accent); }
   .cal-cell.selected .d, .cal-cell.selected .kc { color: #fff; }
 
@@ -254,7 +270,7 @@
   <!-- Daily total -->
   <div class="total-card">
     <div class="total-num" id="totalNum">0</div>
-    <div class="total-label">calories today</div>
+    <div class="total-label" id="totalLabel">calories today</div>
     <div class="target-line none" id="targetLine">No daily target set</div>
     <div class="progress" id="progressWrap" style="display:none"><div id="progressBar"></div></div>
   </div>
@@ -265,6 +281,9 @@
     <input class="note" id="noteInput" type="text" placeholder="What did you eat? (optional)" aria-label="Note">
     <button type="submit" id="addBtn">Add</button>
   </form>
+
+  <!-- Shown only when viewing a past day, so entries never land on the wrong date silently -->
+  <div class="add-context" id="addContext" style="display:none"></div>
 
   <!-- One-tap saved meals -->
   <div class="quick" id="quickMeals"></div>
@@ -291,7 +310,7 @@
     <button id="importBtn">⬆ Import</button>
     <input type="file" id="importFile" accept="application/json,.json" style="display:none">
   </div>
-  <div class="hint">Tip: add several items at once by typing a sum like <b>200+150+30</b>. Tap the date for the calendar. Data syncs across devices sharing your sync code.</div>
+  <div class="hint">Tip: add several items at once by typing a sum like <b>200+150+30</b>. Tap the date for the calendar — anything you add while a past day is open is logged to that day, and <b>✎</b> lets you change an entry's date and time.</div>
 </div>
 
 <!-- Edit modal -->
@@ -302,6 +321,16 @@
     <input id="editCal" type="tel" inputmode="tel">
     <label for="editNote">Note</label>
     <input id="editNote" type="text" placeholder="Optional">
+    <div class="when-grid">
+      <div>
+        <label for="editDate">Date</label>
+        <input id="editDate" type="date">
+      </div>
+      <div>
+        <label for="editTime">Time</label>
+        <input id="editTime" type="time">
+      </div>
+    </div>
     <div class="row">
       <button class="cancel" id="editCancel" type="button">Cancel</button>
       <button class="save" id="editSave" type="button">Save</button>
@@ -707,16 +736,22 @@
     dayDate: document.getElementById("dayDate"),
     list: document.getElementById("entriesList"),
     emptyState: document.getElementById("emptyState"),
-    nextDay: document.getElementById("nextDay")
+    nextDay: document.getElementById("nextDay"),
+    addContext: document.getElementById("addContext"),
+    totalLabel: document.getElementById("totalLabel")
   };
 
   function render() {
     el.dayName.textContent = fmtDayName(viewDate);
     el.dayDate.textContent = fmtDayDate(viewDate);
     el.nextDay.disabled = (viewDate >= todayKey());
+    renderAddContext();
 
     var total = totalForDay(viewDate);
     el.totalNum.textContent = fmtNum(total);
+    el.totalLabel.textContent = viewDate === todayKey() ? "calories today"
+      : viewDate === shiftDay(todayKey(), -1) ? "calories yesterday"
+      : "calories on " + keyToDate(viewDate).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
     if (data.target && data.target > 0) {
       var remaining = data.target - total;
@@ -765,6 +800,19 @@
     renderDayMeta();
   }
 
+  // Make it obvious when new entries will be filed under a past day rather than today.
+  function renderAddContext() {
+    if (viewDate === todayKey()) { el.addContext.style.display = "none"; el.addContext.innerHTML = ""; return; }
+    el.addContext.style.display = "flex";
+    el.addContext.innerHTML = "";
+    var msg = document.createElement("span");
+    msg.textContent = "Adding to " + fmtDayName(viewDate) + ", " + fmtDayDate(viewDate);
+    var back = document.createElement("button");
+    back.type = "button"; back.textContent = "Back to today";
+    back.onclick = function () { viewDate = todayKey(); render(); };
+    el.addContext.appendChild(msg); el.addContext.appendChild(back);
+  }
+
   // Populate the sleep/note inputs for the viewed day (without clobbering an input being edited).
   function renderDayMeta() {
     var day = data.days[viewDate];
@@ -796,10 +844,18 @@
   }
 
   // ---------- Mutations ----------
+  // Timestamp for a new entry: "now" on today, or the same clock time on the day being viewed.
+  // Keeps the entry on the day the user is actually looking at instead of jumping to today.
+  function tsForViewDate() {
+    var now = new Date();
+    if (viewDate >= todayKey()) return now.getTime();   // never stamp an entry in the future
+    var d = keyToDate(viewDate);
+    d.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), 0);
+    return d.getTime();
+  }
   function addEntry(calories, note) {
-    var now = Date.now();
-    data.entries.push({ id: uuid(), calories: calories, note: note, ts: now, updated_at: now, dirty: true, deleted: false });
-    viewDate = todayKey(); // entries log to now — make sure the user sees them
+    data.entries.push({ id: uuid(), calories: calories, note: note, ts: tsForViewDate(),
+                        updated_at: Date.now(), dirty: true, deleted: false });
     save(); render(); syncNow();
   }
   function addMeal(name, calories) {
@@ -834,22 +890,48 @@
     e.deleted = true; e.dirty = true; e.updated_at = stamp(e.updated_at);
     save(); render(); syncNow();
   }
+  function timeValueFromTs(ts) {
+    var d = new Date(ts);
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
   function openEdit(id) {
     var e = findEntry(id);
     if (!e) return;
     editingId = id;
     document.getElementById("editCal").value = e.calories;
     document.getElementById("editNote").value = e.note || "";
+    var dateInput = document.getElementById("editDate");
+    dateInput.max = todayKey();               // entries can be moved back, not into the future
+    dateInput.value = dayKeyOfEntry(e);
+    document.getElementById("editTime").value = timeValueFromTs(e.ts);
     document.getElementById("editModal").classList.add("show");
     document.getElementById("editCal").focus();
   }
   function closeEdit() { editingId = null; document.getElementById("editModal").classList.remove("show"); }
   function saveEdit() {
     if (!editingId) return;
+    var e = findEntry(editingId);
+    if (!e) { closeEdit(); return; }
+
     var val = parseCalories(document.getElementById("editCal").value);
     if (!(val > 0)) { alert("Calories must be a positive number."); return; }
-    var e = findEntry(editingId);
-    if (e) { e.calories = val; e.note = document.getElementById("editNote").value.trim(); e.dirty = true; e.updated_at = stamp(e.updated_at); }
+
+    // Recompose the timestamp from the date + time fields, falling back to the entry's own values.
+    var dayKey = document.getElementById("editDate").value || dayKeyOfEntry(e);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey)) { alert("Enter a valid date."); return; }
+    if (dayKey > todayKey()) { alert("You can't log an entry in the future."); return; }
+    var timeVal = document.getElementById("editTime").value || timeValueFromTs(e.ts);
+    var tp = timeVal.split(":");
+    var when = keyToDate(dayKey);
+    when.setHours(parseInt(tp[0], 10) || 0, parseInt(tp[1], 10) || 0, 0, 0);
+
+    e.calories = val;
+    e.note = document.getElementById("editNote").value.trim();
+    e.ts = when.getTime();
+    e.dirty = true; e.updated_at = stamp(e.updated_at);
+
+    // Follow the entry if it moved to another day, so the edit is visibly confirmed.
+    if (dayKey !== viewDate) viewDate = dayKey;
     save(); closeEdit(); render(); syncNow();
   }
 
@@ -942,7 +1024,12 @@
       if (key === viewDate) cell.classList.add("selected");
       var dn = document.createElement("div"); dn.className = "d"; dn.textContent = day; cell.appendChild(dn);
       if (tot > 0) { var kc = document.createElement("div"); kc.className = "kc"; kc.textContent = fmtNum(tot); cell.appendChild(kc); }
-      (function (k) { cell.onclick = function () { viewDate = k; closeCalendar(); render(); }; })(key);
+      // Future days aren't selectable — matching the disabled › button, so entries can't be logged ahead of today.
+      if (key > tKey) {
+        cell.classList.add("future");
+      } else {
+        (function (k) { cell.onclick = function () { viewDate = k; closeCalendar(); render(); }; })(key);
+      }
       grid.appendChild(cell);
     }
     // Always fill out to 6 full rows so the grid height (and the arrows above it) stay put across months.
@@ -1027,8 +1114,9 @@
   document.getElementById("editSave").onclick = saveEdit;
   document.getElementById("editCancel").onclick = closeEdit;
   document.getElementById("editModal").addEventListener("click", function (ev) { if (ev.target === this) closeEdit(); });
-  document.getElementById("editCal").addEventListener("keydown", function (ev) { if (ev.key === "Enter") saveEdit(); });
-  document.getElementById("editNote").addEventListener("keydown", function (ev) { if (ev.key === "Enter") saveEdit(); });
+  ["editCal", "editNote", "editDate", "editTime"].forEach(function (id) {
+    document.getElementById(id).addEventListener("keydown", function (ev) { if (ev.key === "Enter") saveEdit(); });
+  });
 
   // ---------- Sync modal ----------
   function openSync() {

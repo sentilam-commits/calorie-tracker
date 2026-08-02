@@ -7,9 +7,10 @@ A tiny, private calorie tracker that **syncs across your devices** (phone + comp
 - Big, prominent **daily total**.
 - Fast entry: type calories → optional note → **Enter** or **Add**. Total updates instantly.
 - Each entry saves its **date and time** automatically.
-- **Edit** or **delete** any entry; the total recalculates immediately.
+- **Edit** or **delete** any entry; the total recalculates immediately. Editing also lets you change an entry's **date and time**, so you can re-time a meal or move it to the day it actually belongs to.
 - A **new day starts automatically** each calendar day. Old days are kept.
-- Browse **previous days** with the ‹ / › arrows (or the **Today** button).
+- Browse **previous days** with the ‹ / › arrows, the calendar, or the **Today** button.
+- **Back-fill past days:** open a previous day and anything you add — typed entries or one-tap saved meals — is logged to *that* day, not today. A banner shows which day you're adding to, with a one-tap way back. Future days can't be selected or logged to.
 - Optional **daily target** — shows calories left, or how far over.
 - **Cross-device sync** via Supabase (see below).
 - **Export / Import** your data as a JSON file for backups.
