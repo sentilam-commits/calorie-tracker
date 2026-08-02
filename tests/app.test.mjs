@@ -271,24 +271,24 @@ test("an empty day reports 'Not rated'", () => {
 
 // ------------------------------------------------- guidance derived from logs
 
-test("the 'too much' guidance is always readable and opens itself when needed", () => {
+test("the 'too much' guidance stays collapsed; only its heading reacts", () => {
   const app = loadApp();
   const { CT, document } = app;
   const panel = document.getElementById("recoveryPanel");
   const summary = document.getElementById("recoverySummary");
 
   const e = CT.addEntry(600, "cena grande");
-  assert.notEqual(panel.style.display, "none", "reachable even on a day with no 'Too much'");
+  assert.notEqual(panel.style.display, "none", "reachable on any day");
   assert.equal(summary.textContent, "If a meal is too much — what to do");
-  assert.ok(!panel.open, "stays collapsed until it is relevant");
+  assert.ok(!panel.open, "collapsed by default");
 
   CT.setTolerance(e.id, "much");
-  assert.equal(panel.open, true, "opens on a day that exceeded tolerance");
+  assert.ok(!panel.open, "still collapsed on a day that exceeded tolerance");
   assert.equal(summary.textContent, "A meal was too much — what to do next");
 
-  panel.open = false;                       // user collapses it again
+  panel.open = true;                        // user opens it
   CT.render();
-  assert.equal(panel.open, false, "a re-render does not force it back open");
+  assert.equal(panel.open, true, "a re-render does not close it either");
 
   CT.setTolerance(e.id, "ok");
   assert.equal(summary.textContent, "If a meal is too much — what to do");
