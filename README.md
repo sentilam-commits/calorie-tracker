@@ -9,8 +9,8 @@ A tiny, private calorie tracker that **syncs across your devices** (phone + comp
 - Each entry saves its **date and time** automatically.
 - **Edit** or **delete** any entry; the total recalculates immediately.
 - A **new day starts automatically** each calendar day. Old days are kept.
-- Browse **previous days** with the ‹ / › arrows, the **date selector**, the calendar, or the **Today** button.
-- **Work on any past day**: add, edit and delete meals there. New entries stay on the day you're viewing, never jump to today, and the day's total recalculates on every change. A **Past day** badge and the total's caption ("calories on Aug 1") always show which date you're on. **✓ Save this day** pushes the day to your other devices; pressing it twice does nothing extra.
+- Browse **previous days** with the ‹ / › arrows, the **calendar** (tap the date), or the **Today** button. Future days can't be selected.
+- **Work on any past day**: add, edit and delete meals there. New entries stay on the day you're viewing, never jump to today, and the day's total recalculates on every change. A **Past day — Aug 1** badge and the total's caption ("calories on Aug 1") always show which date you're on. **✓ Save this day** pushes the day to your other devices; pressing it twice does nothing extra.
 - Optional **meal tolerance** — mark any meal **OK** or **Too much**, at any time after eating it (nothing is selected by default, and meals logged before this existed stay valid as unrated). The day then shows a small status under the total: *Within tolerance* (every meal rated OK), *Exceeded tolerance* (at least one "Too much"), *Partly rated* (some meals still unrated — never counted as a full "within tolerance"), or *Not rated*.
 - Two short guidance notes derived from your own logs: **what to do after a "Too much" meal** (shown only on days that have one) and **when to step intake up by ~100 kcal** (after 3 consecutive days rated fully OK). Plus an **evening check** when the last meal of a day isn't the smallest one.
 - Optional **daily target** — shows calories left, or how far over.

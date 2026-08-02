@@ -38,20 +38,26 @@ test("future days cannot be selected or written to", () => {
   assert.equal(CT.addEntry(200, "x", { day: tomorrow }), null);
 });
 
-test("the date picker jumps to a past day and back to today", () => {
+test("the arrows and Today button move between days and flag past ones", () => {
   const app = loadApp();
   const { CT, document } = app;
-  const past = CT.shiftDay(CT.todayKey(), -12);
+  const flagRow = document.getElementById("dayFlagRow");
 
-  const picker = document.getElementById("datePicker");
-  picker.value = past;
-  picker.dispatch("change");
-  assert.equal(CT.state().viewDate, past);
-  assert.equal(document.getElementById("pastFlag").hidden, false, "past-day flag is visible");
+  assert.equal(flagRow.style.display, "none", "no flag on today");
 
+  document.getElementById("prevDay").dispatch("click");
+  assert.equal(CT.state().viewDate, CT.shiftDay(CT.todayKey(), -1));
+  assert.equal(flagRow.style.display, "flex", "past-day flag is visible");
+  assert.match(document.getElementById("pastFlag").textContent, /^Past day — /);
+
+  document.getElementById("nextDay").dispatch("click");
+  assert.equal(CT.state().viewDate, CT.todayKey());
+  assert.equal(document.getElementById("nextDay").disabled, true, "can't go past today");
+
+  document.getElementById("prevDay").dispatch("click");
   document.getElementById("todayBtn").dispatch("click");
   assert.equal(CT.state().viewDate, CT.todayKey());
-  assert.equal(document.getElementById("pastFlag").hidden, true);
+  assert.equal(flagRow.style.display, "none");
 });
 
 // ------------------------------------------------------- totals recalculated

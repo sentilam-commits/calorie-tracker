@@ -64,14 +64,8 @@
   .daynav .daylabel small { display: block; color: var(--muted); font-weight: 400; font-size: 12px; }
   .today-btn { width: auto !important; padding: 0 12px; font-size: 13px !important; height: 40px; }
 
-  /* Date selector + "you are on a past day" flag */
-  .dayjump { display: flex; align-items: center; gap: 8px; margin: -6px 0 14px; }
-  .dayjump input[type="date"] {
-    flex: 1; min-width: 0; background: var(--card); border: 1px solid var(--border); color: var(--text);
-    border-radius: 10px; padding: 9px 12px; font-size: 15px; outline: none; font-family: inherit;
-  }
-  .dayjump input[type="date"]:focus { border-color: var(--accent); }
-  .dayjump input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.8); opacity: .7; cursor: pointer; }
+  /* "You are editing a past day" flag */
+  .dayflag { display: flex; justify-content: center; margin: -6px 0 14px; }
   .past-flag {
     flex: none; background: rgba(240,176,62,.14); border: 1px solid rgba(240,176,62,.4); color: var(--warn);
     border-radius: 999px; padding: 7px 12px; font-size: 12px; font-weight: 600; white-space: nowrap;
@@ -332,10 +326,9 @@
     <button id="todayBtn" class="today-btn" title="Jump to today">Today</button>
   </div>
 
-  <!-- Date selector (any previous day) -->
-  <div class="dayjump">
-    <input type="date" id="datePicker" aria-label="Jump to a date">
-    <span class="past-flag" id="pastFlag" hidden>Past day</span>
+  <!-- Only shown while a past day is selected -->
+  <div class="dayflag" id="dayFlagRow" style="display:none">
+    <span class="past-flag" id="pastFlag">Past day</span>
   </div>
 
   <!-- Daily total -->
@@ -946,7 +939,7 @@
     list: document.getElementById("entriesList"),
     emptyState: document.getElementById("emptyState"),
     nextDay: document.getElementById("nextDay"),
-    datePicker: document.getElementById("datePicker"),
+    dayFlagRow: document.getElementById("dayFlagRow"),
     pastFlag: document.getElementById("pastFlag"),
     totalLabel: document.getElementById("totalLabel"),
     statusLine: document.getElementById("statusLine"),
@@ -962,9 +955,8 @@
     el.dayName.textContent = fmtDayName(viewDate);
     el.dayDate.textContent = fmtDayDate(viewDate);
     el.nextDay.disabled = (viewDate >= todayKey());
-    el.datePicker.max = todayKey();
-    if (document.activeElement !== el.datePicker) el.datePicker.value = viewDate;
-    el.pastFlag.hidden = isToday;
+    el.dayFlagRow.style.display = isToday ? "none" : "flex";
+    el.pastFlag.textContent = "Past day — " + fmtDayShort(viewDate);
     el.totalLabel.textContent = isToday ? "calories today" : "calories on " + fmtDayShort(viewDate);
 
     var total = totalForDay(viewDate);
@@ -1306,9 +1298,6 @@
   document.getElementById("prevDay").onclick = function () { goToDay(shiftDay(viewDate, -1)); };
   document.getElementById("nextDay").onclick = function () { if (viewDate < todayKey()) goToDay(shiftDay(viewDate, 1)); };
   document.getElementById("todayBtn").onclick = function () { goToDay(todayKey()); };
-  document.getElementById("datePicker").addEventListener("change", function () {
-    if (!goToDay(this.value)) { alert("Pick a valid date up to today."); this.value = viewDate; }
-  });
 
   // ---------- Save the day / step up ----------
   document.getElementById("saveDayBtn").onclick = function () { submitDay(); };
@@ -1377,7 +1366,7 @@
       if (key === viewDate) cell.classList.add("selected");
       var dn = document.createElement("div"); dn.className = "d"; dn.textContent = day; cell.appendChild(dn);
       if (tot > 0) { var kc = document.createElement("div"); kc.className = "kc"; kc.textContent = fmtNum(tot); cell.appendChild(kc); }
-      (function (k) { cell.onclick = function () { viewDate = k; closeCalendar(); render(); }; })(key);
+      (function (k) { cell.onclick = function () { closeCalendar(); goToDay(k); }; })(key);
       grid.appendChild(cell);
     }
     // Always fill out to 6 full rows so the grid height (and the arrows above it) stay put across months.
