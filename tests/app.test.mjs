@@ -463,6 +463,39 @@ test("reordering follows the edited time", () => {
   assert.equal(order(), "a,b", "moving 'a' to 20:00 puts it on top");
 });
 
+// ------------------------------------------------- offline / unsynced changes
+
+test("unsynced changes are counted and flagged for backup", () => {
+  const app = loadApp();
+  const { CT, document } = app;
+  const warn = document.getElementById("pendingWarn");
+
+  assert.equal(CT.pendingCount(), 0);
+  assert.equal(warn.style.display, "none");
+
+  const e = CT.addEntry(300, "comida");
+  assert.equal(CT.pendingCount(), 1);
+  CT.setTolerance(e.id, "ok");
+  assert.equal(CT.pendingCount(), 1, "the same entry stays one pending change");
+
+  CT.addEntry(200, "otra");
+  assert.equal(CT.pendingCount(), 2);
+  assert.equal(warn.style.display, "block");
+  assert.match(warn.textContent, /2 changes are saved on this phone only/);
+});
+
+test("a provider block is reported differently from being offline", () => {
+  const app = loadApp();
+  const { CT } = app;
+  assert.equal(
+    CT.describeSyncError({ message: "Service for this project is restricted due to the following violations: exceed_storage_size_quota" }),
+    "Sync paused — provider quota"
+  );
+  assert.equal(CT.describeSyncError({ code: "402" }), "Sync paused — provider quota");
+  assert.equal(CT.describeSyncError({ message: "Failed to fetch" }), null, "a network drop stays 'offline'");
+  assert.equal(CT.describeSyncError(null), null);
+});
+
 // ------------------------------------------------------------ persistence
 
 test("entries, dates and tolerance survive a reload", () => {
